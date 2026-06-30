@@ -128,7 +128,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.keyboard!.on("keydown-ESC", () => this.openPause());
-    this.events.on("resume-from-pause",    () => this.resumeFromPause());
+
+    // scene.pause() / scene.resume() fire these Phaser lifecycle events —
+    // hook them to handle timer/sound/sizeSystem pause/resume in one place.
+    this.events.on(Phaser.Scenes.Events.PAUSE,  () => this.onScenePause());
+    this.events.on(Phaser.Scenes.Events.RESUME, () => this.onSceneResume());
 
     // Music — tutorial uses menu track, timed levels use the level track
     const track = levelCfg.music === "menu" ? "menumusic" : "bgmusic";
@@ -225,15 +229,24 @@ export class GameScene extends Phaser.Scene {
   private openPause() {
     if (this.gameOver || this.levelComplete) return;
     if (this.scene.isActive("PauseScene")) return; // already open
-    this.physics.pause();
-    this.timerSystem?.pause();
-    this.sound.pauseAll();
+    // scene.pause() freezes tweens, animations, physics, and the update loop
+    // all at once — truly frozen mid-air. The PAUSE lifecycle event triggers
+    // onScenePause() below which handles timer/sound/sizeSystem.
+    this.scene.pause();
     this.scene.launch("PauseScene");
   }
 
-  private resumeFromPause() {
-    this.physics.resume();
+  /** Called by Phaser when this scene is paused (via scene.pause()). */
+  private onScenePause() {
+    this.timerSystem?.pause();
+    this.sizeSystem?.pauseShrinkTimer();
+    this.sound.pauseAll();
+  }
+
+  /** Called by Phaser when this scene is resumed (via scene.resume()). */
+  private onSceneResume() {
     this.timerSystem?.resume();
+    this.sizeSystem?.resumeShrinkTimer();
     this.sound.resumeAll();
   }
 

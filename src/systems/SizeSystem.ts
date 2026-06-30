@@ -24,6 +24,7 @@ export class SizeSystem {
   private stage: StageIndex = 0;
   private lastEatTime = 0;
   private shrinkTimer: ReturnType<typeof setTimeout> | null = null;
+  private shrinkTimerRemaining = 0; // ms saved when paused
   private listeners: SizeListener[] = [];
 
   constructor(private getTime: () => number) {}
@@ -57,6 +58,25 @@ export class SizeSystem {
     this.stage = (this.stage - 1) as StageIndex;
     this.emit({ type: "shrink", stage: this.stage });
     if (this.stage > 0) this.scheduleShrink();
+  }
+
+  /** Cancel the shrink timer, storing how much time was left. */
+  pauseShrinkTimer() {
+    if (this.shrinkTimer !== null) {
+      clearTimeout(this.shrinkTimer);
+      this.shrinkTimer = null;
+      this.shrinkTimerRemaining = this.getShrinkCooldownRemaining();
+    }
+  }
+
+  /** Reschedule the shrink timer with the remaining time saved at pause. */
+  resumeShrinkTimer() {
+    if (this.stage > 0 && this.shrinkTimerRemaining > 0) {
+      // Adjust lastEatTime so getShrinkCooldownRemaining() stays accurate
+      this.lastEatTime = this.getTime() - (SHRINK_COOLDOWN_MS - this.shrinkTimerRemaining);
+      this.shrinkTimer = setTimeout(() => this.shrink(), this.shrinkTimerRemaining);
+      this.shrinkTimerRemaining = 0;
+    }
   }
 
   getStage(): StageIndex { return this.stage; }

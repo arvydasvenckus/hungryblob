@@ -8,8 +8,8 @@ export class PauseScene extends Phaser.Scene {
     let acted = false;
     const once = (fn: () => void) => { if (!acted) { acted = true; fn(); } };
 
-    // Semi-transparent dark overlay
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65);
+    // Dark overlay — high opacity so the frozen game recedes clearly
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.82);
 
     // Title
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 220, "PAUSED", {
@@ -64,8 +64,9 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private doResume() {
-    // Emit before stopping so GameScene's listener fires while it's still active
-    this.scene.get("GameScene")?.events.emit("resume-from-pause");
+    // scene.resume() fires GameScene's RESUME lifecycle event, which calls
+    // onSceneResume() — that re-enables timer, sizeSystem timer, and sound.
+    this.scene.resume("GameScene");
     this.scene.stop("PauseScene");
   }
 
