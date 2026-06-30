@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_WIDTH, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
+import { GAME_WIDTH, GAME_HEIGHT, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
 import type { StageIndex } from "../config/constants";
 import { LEVELS, getFoodGrowth, getFoodScore, getFoodCategory } from "../config/levels";
 import { SizeSystem } from "../systems/SizeSystem";
@@ -70,8 +70,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.cameras.main.setBounds(0, 0, levelWidth, levelHeight);
+    // Zoom so the level fills the canvas vertically without changing any geometry
+    this.cameras.main.setZoom(GAME_HEIGHT / levelHeight);
     this.cameras.main.startFollow(this.blob.visual, true, 0.1, 0.1);
-    this.cameras.main.setDeadzone(120, 80);
+    this.cameras.main.setDeadzone(240, 160);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
