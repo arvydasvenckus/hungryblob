@@ -2,166 +2,189 @@ import Phaser from "phaser";
 import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
 
 /**
- * Builds Level 1 (Air Duct theme) entirely in code using Phaser's arcade
- * physics static groups and graphics. When real Tiled tilemaps are ready,
- * swap this out with a Phaser tilemap loader.
+ * Tutorial Level 1 — "Air Ducts"
  *
- * Passage widths are sized to gate specific blob stages:
- *   narrow  = 1.3 × Stage 0 height → only Stage 0 (28px) fits → gap ~37px
- *   medium  = 1.3 × Stage 1 height → Stage 0–1 (38px) fits  → gap ~50px
- *   wide    = 1.3 × Stage 2 height → Stage 0–2 (50px) fits  → gap ~65px
- *   open    = 1.3 × Stage 3 height → Stage 0–3 fit          → gap ~83px
+ * Passage widths (gap between ceiling and main floor):
+ *   NARROW = 37 px  → Stage 0 (28 px) fits,  Stage 1 (38 px) blocked
+ *   MEDIUM = 44 px  → Stage 1 (38 px) fits,  Stage 2 (50 px) blocked
+ *
+ * Guided food sequence (see levels.ts):
+ *   apple + banana          → reach Stage 0 max (food_count = 2)
+ *   [NARROW DUCT]           → can only pass at Stage 0
+ *   strawberry              → food_count = 3, Stage 1
+ *   burger (+2) + pizza (+2)→ food_count = 7, Stage 2
+ *   [MEDIUM DUCT]           → blocked at Stage 2, must digest to Stage 1
+ *   orange + carrot         → food_count = 9–10, Stage 3
+ *   [EXIT]
  */
 
 const T = TILE_SIZE; // 32
-const NARROW = Math.ceil(SIZE_STAGES[0].height * 1.3); // ~37 → use 40
-const MEDIUM = Math.ceil(SIZE_STAGES[1].height * 1.3); // ~50 → use 52
-const WIDE   = Math.ceil(SIZE_STAGES[2].height * 1.3); // ~65 → use 68
-const OPEN   = Math.ceil(SIZE_STAGES[3].height * 1.3); // ~84 → use 88
 
-export const LEVEL_WIDTH  = 1920;
+// Gap sizes
+const NARROW = Math.ceil(SIZE_STAGES[0].height * 1.3); // 37 px
+const MEDIUM  = 44; // allows stage 1 (38 px), blocks stage 2 (50 px)
+
+export const LEVEL_WIDTH  = 1440;
 export const LEVEL_HEIGHT = 560;
+const FLOOR_Y = LEVEL_HEIGHT - T; // y=528, top of floor tile
 
 export interface LevelObjects {
   platforms: Phaser.Physics.Arcade.StaticGroup;
-  exitZone: Phaser.GameObjects.Zone;
+  exitZone:  Phaser.GameObjects.Zone;
   bgGraphics: Phaser.GameObjects.Graphics;
 }
 
 export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
+  // ── Background ─────────────────────────────────────────────────────────────
   const bg = scene.add.graphics();
   bg.fillStyle(0x1a1a2e, 1);
   bg.fillRect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
   drawBgDetails(bg);
 
-  // Helper: add a solid platform rectangle
-  function wall(x: number, y: number, w: number, h: number) {
+  // ── Wall helper ────────────────────────────────────────────────────────────
+  function wall(x: number, y: number, w: number, h: number, color = 0x2d3748) {
     const g = scene.add.graphics();
-    g.fillStyle(0x2d3748, 1);
+    g.fillStyle(color, 1);
     g.fillRect(0, 0, w, h);
-    g.fillStyle(0x4a5568, 0.6);
-    g.fillRect(0, 0, w, 3);
-    g.fillRect(0, 0, 3, h);
-    g.fillStyle(0x718096, 0.3);
-    g.fillRect(0, 0, w, 1);
-    g.generateTexture(`wall_${x}_${y}`, w, h);
+    // Top edge highlight
+    g.fillStyle(0x4a5568, 0.7); g.fillRect(0, 0, w, 3);
+    // Left edge highlight
+    g.fillStyle(0x718096, 0.3); g.fillRect(0, 0, 2, h);
+    // Rivet decorations on wider walls
+    if (w > 64) {
+      g.fillStyle(0x4a5568, 0.5);
+      for (let rx = 12; rx < w - 12; rx += 48) {
+        g.fillCircle(rx, h / 2, 3);
+        g.fillCircle(rx + 24, h / 2, 3);
+      }
+    }
+    const texKey = `wall_${x}_${y}_${w}_${h}`;
+    g.generateTexture(texKey, w, h);
     g.destroy();
-
-    const img = scene.physics.add.staticImage(x + w / 2, y + h / 2, `wall_${x}_${y}`);
+    const img = scene.physics.add.staticImage(x + w / 2, y + h / 2, texKey);
     img.setDisplaySize(w, h);
     img.refreshBody();
     platforms.add(img);
   }
 
-  // Helper: duct ceiling/floor pair that creates a passage gap
-  function duct(x: number, floorY: number, passageH: number, w: number, thickness = T) {
-    const ceilY = floorY - passageH - thickness;
-    wall(x, ceilY, w, thickness);          // ceiling
-    wall(x, floorY, w, thickness);         // floor
+  // ── Duct ceiling helper ─────────────────────────────────────────────────────
+  // Creates ONLY the ceiling of a duct (the floor is the main floor).
+  function ductCeiling(x: number, gapFromFloor: number, width: number, thickness = T) {
+    const ceilBottom = FLOOR_Y - gapFromFloor;
+    const ceilTop    = ceilBottom - thickness;
+    wall(x, ceilTop, width, thickness);
   }
 
-  // ── FLOOR ─────────────────────────────────────────────────────────────────
-  // Main floor runs the full width
-  wall(0, LEVEL_HEIGHT - T, LEVEL_WIDTH, T);
+  // ── Boundary walls ─────────────────────────────────────────────────────────
+  wall(0, 0, T, LEVEL_HEIGHT);                       // left
+  wall(LEVEL_WIDTH - T, 0, T, LEVEL_HEIGHT);         // right
+  wall(0, 0, LEVEL_WIDTH, T);                        // ceiling
+  wall(0, FLOOR_Y, LEVEL_WIDTH, T);                  // floor
 
-  // ── CEILING ───────────────────────────────────────────────────────────────
-  wall(0, 0, LEVEL_WIDTH, T);
+  // ── SECTION 1: Open start (x 32 → 480) ────────────────────────────────────
+  // Nothing special — open space for player to learn controls.
 
-  // ── LEFT WALL ─────────────────────────────────────────────────────────────
-  wall(0, 0, T, LEVEL_HEIGHT);
+  // ── SECTION 2: Narrow duct (x 490 → 750) ──────────────────────────────────
+  // Gap = 37 px: stage 0 (28 px) fits, stage 1 (38 px) blocked.
+  ductCeiling(490, NARROW, 260);
 
-  // ── RIGHT WALL ────────────────────────────────────────────────────────────
-  wall(LEVEL_WIDTH - T, 0, T, LEVEL_HEIGHT);
+  // Low step ramp leading into the duct
+  wall(430, FLOOR_Y - T * 1.5, 64, T * 0.5);
 
-  // ── SECTION 1: Open start area ────────────────────────────────────────────
-  // Platform player starts on
-  wall(T, LEVEL_HEIGHT - T * 2, T * 6, T / 2);
+  // ── SECTION 3: Open chamber (x 750 → 1110) ────────────────────────────────
+  // Spacious — unhealthy food here, player grows fast.
+  // Small raised platform so it feels less flat
+  wall(900, FLOOR_Y - T * 2, 80, T * 0.5);
 
-  // ── SECTION 2: Narrow duct (Stage 0 only) ─────────────────────────────────
-  // Horizontal duct from x=220 to x=500, gap = NARROW
-  const ductFloor1 = LEVEL_HEIGHT - T * 4;
-  duct(220, ductFloor1, NARROW, 280);
-
-  // Step up to enter duct
-  wall(160, ductFloor1 - T, T * 2, T / 2);
-
-  // ── SECTION 3: Open chamber with food ────────────────────────────────────
-  // Drop down into a chamber
-  wall(500, LEVEL_HEIGHT - T * 2, T * 4, T / 2); // landing
-
-  // ── SECTION 4: Medium duct (Stage 0–1) ────────────────────────────────────
-  const ductFloor2 = LEVEL_HEIGHT - T * 6;
-  duct(620, ductFloor2, MEDIUM, 300);
-  wall(500, ductFloor2 - T, T * 4, T / 2); // step up
-
-  // ── SECTION 5: Vertical shaft ─────────────────────────────────────────────
-  // Left wall of shaft
-  wall(920, T, T, LEVEL_HEIGHT - T * 3);
-  // Right wall (open at bottom for player to enter from left)
-  wall(920 + OPEN + T, T, T, LEVEL_HEIGHT - T * 5);
-
-  // ── SECTION 6: Wide duct (Stage 0–2) ──────────────────────────────────────
-  const ductFloor3 = T * 5;
-  duct(960 + OPEN, ductFloor3, WIDE, 340);
-  // Landing at top right of shaft
-  wall(920 + OPEN + T, ductFloor3 - T, T * 4, T / 2);
-
-  // ── SECTION 7: Descending platforms ───────────────────────────────────────
-  wall(1350, T * 8, T * 5, T / 2);
-  wall(1480, T * 11, T * 5, T / 2);
-  wall(1350, T * 14, T * 5, T / 2);
-
-  // ── SECTION 8: Final narrow squeeze before exit ───────────────────────────
-  const ductFloor4 = LEVEL_HEIGHT - T * 4;
-  duct(1560, ductFloor4, NARROW, 220);
+  // ── SECTION 4: Medium duct (x 1115 → 1360) ────────────────────────────────
+  // Gap = 44 px: stage 1 (38 px) fits, stage 2 (50 px) blocked.
+  ductCeiling(1115, MEDIUM, 245);
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
-  // Green door graphic
+  const exitX = LEVEL_WIDTH - T * 2 - 10;
+  const exitY = FLOOR_Y - T * 2;
+
   const exitGfx = scene.add.graphics();
-  exitGfx.fillStyle(0x2ecc71, 0.25);
-  exitGfx.fillRect(0, 0, T * 2, T * 3);
+  exitGfx.fillStyle(0x2ecc71, 0.2);
+  exitGfx.fillRect(0, 0, T * 1.5, T * 2);
   exitGfx.lineStyle(3, 0x2ecc71, 1);
-  exitGfx.strokeRect(0, 0, T * 2, T * 3);
+  exitGfx.strokeRect(0, 0, T * 1.5, T * 2);
   exitGfx.fillStyle(0x2ecc71, 1);
-  exitGfx.fillTriangle(12, T, 20, T * 1.5, 12, T * 2);
-  exitGfx.generateTexture("exit_door", T * 2, T * 3);
+  exitGfx.fillTriangle(8, T * 0.6, 18, T, 8, T * 1.4);
+  exitGfx.generateTexture("exit_door", T * 1.5, T * 2);
   exitGfx.destroy();
 
-  const exitX = LEVEL_WIDTH - T * 3;
-  const exitY = LEVEL_HEIGHT - T * 4;
-  scene.add.image(exitX + T, exitY + T * 1.5, "exit_door");
+  scene.add.image(exitX + T * 0.75, exitY + T, "exit_door");
 
-  const exitZone = scene.add.zone(exitX + T, exitY + T * 1.5, T * 2, T * 3);
+  const exitZone = scene.add.zone(exitX + T * 0.75, exitY + T, T * 1.5, T * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
+
+  // ── TUTORIAL HINTS (in-world text) ─────────────────────────────────────────
+  const hintStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+    fontSize: "13px",
+    color: "#a0aec0",
+    fontFamily: "monospace",
+    stroke: "#000000",
+    strokeThickness: 2,
+    align: "center",
+  };
+
+  // Controls
+  scene.add.text(160, FLOOR_Y - 110, "← → Move\n↑ / SPACE Jump", hintStyle).setOrigin(0.5);
+
+  // Arrow above apple spawn
+  scene.add.text(280, FLOOR_Y - 90, "▼", { fontSize: "20px", color: "#27ae60", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
+
+  // Before narrow duct
+  scene.add.text(510, FLOOR_Y - 70, "Too big? Wait to digest!", {
+    ...hintStyle, color: "#f39c12",
+  }).setOrigin(0.5);
+
+  // After narrow duct — unhealthy food hint
+  scene.add.text(960, FLOOR_Y - 100, "Unhealthy food\n×2 growth + ×2 score!", {
+    ...hintStyle, color: "#ff6b9d",
+  }).setOrigin(0.5);
+
+  // Before medium duct
+  scene.add.text(1135, FLOOR_Y - 70, "Digest again →", {
+    ...hintStyle, color: "#f39c12",
+  }).setOrigin(0.5);
+
+  // Exit arrow
+  scene.add.text(exitX + T * 0.75, exitY - 20, "EXIT ▼", {
+    fontSize: "14px", color: "#2ecc71", fontFamily: "monospace",
+    stroke: "#000", strokeThickness: 2,
+  }).setOrigin(0.5);
 
   return { platforms, exitZone, bgGraphics: bg };
 }
 
+// ── Background detail ──────────────────────────────────────────────────────
+
 function drawBgDetails(g: Phaser.GameObjects.Graphics) {
-  // Subtle grid lines to evoke ceiling panels
-  g.lineStyle(1, 0x16213e, 0.5);
+  // Subtle grid
+  g.lineStyle(1, 0x16213e, 0.45);
   for (let x = 0; x < LEVEL_WIDTH; x += 64) {
-    g.beginPath();
-    g.moveTo(x, 0);
-    g.lineTo(x, LEVEL_HEIGHT);
-    g.strokePath();
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, LEVEL_HEIGHT); g.strokePath();
   }
   for (let y = 0; y < LEVEL_HEIGHT; y += 64) {
-    g.beginPath();
-    g.moveTo(0, y);
-    g.lineTo(LEVEL_WIDTH, y);
-    g.strokePath();
+    g.beginPath(); g.moveTo(0, y); g.lineTo(LEVEL_WIDTH, y); g.strokePath();
   }
-  // Vent grille decorations
-  for (let x = 80; x < LEVEL_WIDTH; x += 200) {
-    g.fillStyle(0x16213e, 0.7);
-    g.fillRect(x, 40, 48, 24);
-    g.lineStyle(1, 0x2d3748, 0.8);
+  // Vent grilles along ceiling
+  for (let x = 120; x < LEVEL_WIDTH - 64; x += 180) {
+    g.fillStyle(0x16213e, 0.65);
+    g.fillRect(x, 36, 52, 26);
     for (let i = 0; i < 4; i++) {
       g.fillStyle(0x2d3748, 0.8);
-      g.fillRect(x + 4 + i * 10, 44, 6, 16);
+      g.fillRect(x + 4 + i * 11, 40, 7, 18);
     }
+  }
+  // Small bolt/rivet dots on walls
+  g.fillStyle(0x4a5568, 0.4);
+  for (let y = 60; y < LEVEL_HEIGHT - 60; y += 80) {
+    g.fillCircle(20, y, 3);
+    g.fillCircle(LEVEL_WIDTH - 20, y, 3);
   }
 }

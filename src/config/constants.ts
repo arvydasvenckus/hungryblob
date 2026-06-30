@@ -3,7 +3,7 @@ export const GAME_HEIGHT = 540;
 
 export const TILE_SIZE = 32;
 
-// Size stages: food items eaten → stage index (0-based)
+// Size stages: food units eaten → stage index (0-based)
 export const SIZE_STAGES = [
   { minFood: 0,  maxFood: 2,  width: 28, height: 28, scale: 1.0,  label: "Tiny"   },
   { minFood: 3,  maxFood: 5,  width: 38, height: 38, scale: 1.35, label: "Small"  },
@@ -13,14 +13,17 @@ export const SIZE_STAGES = [
 ] as const;
 
 export const MAX_FOOD = 15;
-export const SHRINK_COOLDOWN_MS = 10_000; // ms after last food before shrinking one stage
-export const SHRINK_TWEEN_MS    = 400;
+export const SHRINK_COOLDOWN_MS = 10_000;
+export const SHRINK_TWEEN_MS    = 500;
 
-export const JUMP_VELOCITY    = -520;
-export const WALK_SPEED       = 200;
-export const GRAVITY          = 900;
+// Per-stage physics — bigger Bob feels heavier
+export const STAGE_JUMP_VELOCITY = [-520, -480, -430, -370, -300] as const;
+export const STAGE_WALK_SPEED    = [200,  185,  165,  140,  115]  as const;
 
-export const LEVEL_TIME_LIMIT = 90; // seconds
+export const GRAVITY = 900;
 
-export type SizeStage = (typeof SIZE_STAGES)[number];
+export const LEVEL_TIME_LIMIT = 90;
+export const STRESS_THRESHOLD = 15; // seconds remaining when Bob looks stressed
+
+export type SizeStage  = (typeof SIZE_STAGES)[number];
 export type StageIndex = 0 | 1 | 2 | 3 | 4;

@@ -35,10 +35,11 @@ export class SizeSystem {
     return 0;
   }
 
-  eat(): boolean {
+  /** @param amount 1 for healthy food, 2 for unhealthy food */
+  eat(amount: 1 | 2 = 1): boolean {
     if (this.foodCount >= MAX_FOOD) return false;
 
-    this.foodCount++;
+    this.foodCount = Math.min(this.foodCount + amount, MAX_FOOD);
     this.lastEatTime = this.getTime();
 
     const newStage = this.stageFor(this.foodCount);
@@ -48,7 +49,7 @@ export class SizeSystem {
     this.scheduleShrink();
 
     this.emit({
-      type: grew ? "grow" : this.foodCount >= MAX_FOOD ? "maxed" : "grow",
+      type: this.foodCount >= MAX_FOOD ? "maxed" : "grow",
       stage: this.stage,
       foodCount: this.foodCount,
     });
@@ -64,17 +65,14 @@ export class SizeSystem {
   private shrink() {
     if (this.stage === 0) return;
     this.stage = (this.stage - 1) as StageIndex;
-    // Recalculate food count to match the new stage upper boundary
     this.foodCount = SIZE_STAGES[this.stage].maxFood;
     this.emit({ type: "shrink", stage: this.stage, foodCount: this.foodCount });
-    // Keep scheduling shrinks until back to stage 0
     if (this.stage > 0) this.scheduleShrink();
   }
 
-  getStage(): StageIndex { return this.stage; }
-  getFoodCount(): number { return this.foodCount; }
+  getStage(): StageIndex  { return this.stage; }
+  getFoodCount(): number  { return this.foodCount; }
 
-  /** Ms remaining until next shrink (0 if not scheduled) */
   getShrinkCooldownRemaining(): number {
     if (this.shrinkTimer === null || this.foodCount === 0) return 0;
     const elapsed = this.getTime() - this.lastEatTime;
