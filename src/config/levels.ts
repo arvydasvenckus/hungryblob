@@ -50,16 +50,14 @@ export const LEVELS: LevelConfig[] = [
     name: "Air Ducts",
     playerStart: { x: 80, y: 514 },
     foods: [
-      // Section 1: two easy healthy items before narrow duct
-      { x: 280,  y: 500, type: "apple"      },
-      { x: 420,  y: 500, type: "banana"     },
-      // Section 2 (after narrow duct): one healthy, then two unhealthy
-      { x: 820,  y: 500, type: "strawberry" },
-      { x: 960,  y: 500, type: "burger"     },
-      { x: 1070, y: 500, type: "pizza"      },
-      // Section 3 (after medium duct): two healthy to close out
-      { x: 1240, y: 500, type: "orange"     },
-      { x: 1340, y: 500, type: "carrot"     },
+      // Before narrow duct: 1 healthy → Stage 1 immediately
+      { x: 280,  y: 500, type: "apple"      }, // +1 → stage 1
+      // After narrow duct: grow toward max
+      { x: 820,  y: 500, type: "strawberry" }, // +1 → stage 2
+      { x: 960,  y: 500, type: "burger"     }, // +2 → stage 4 (MAX)
+      // After medium duct: replenish stages after digestion
+      { x: 1240, y: 500, type: "orange"     }, // +1 → stage 4 (or 3→4 after burp)
+      { x: 1340, y: 500, type: "carrot"     }, // +1 → stays stage 4
     ],
   },
 ];

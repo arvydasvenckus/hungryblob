@@ -9,20 +9,24 @@ import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
  *   MEDIUM = 44 px  → Stage 1 (38 px) fits,  Stage 2 (50 px) blocked
  *
  * Guided food sequence (see levels.ts):
- *   apple + banana          → reach Stage 0 max (food_count = 2)
- *   [NARROW DUCT]           → can only pass at Stage 0
- *   strawberry              → food_count = 3, Stage 1
- *   burger (+2) + pizza (+2)→ food_count = 7, Stage 2
- *   [MEDIUM DUCT]           → blocked at Stage 2, must digest to Stage 1
- *   orange + carrot         → food_count = 9–10, Stage 3
+ *   apple (+1)              → Stage 1   (instant visible growth)
+ *   [NARROW DUCT]           → allows Stage 0–1, blocks Stage 2+
+ *   strawberry (+1)         → Stage 2
+ *   burger (+2)             → Stage 4 MAX  (shows double-growth effect)
+ *   [MEDIUM DUCT]           → allows Stage 0–3, blocks Stage 4
+ *                              player must wait one burp to Stage 3
+ *   orange, carrot (+1 ea)  → back to Stage 4
  *   [EXIT]
  */
 
 const T = TILE_SIZE; // 32
 
-// Gap sizes
-const NARROW = Math.ceil(SIZE_STAGES[0].height * 1.3); // 37 px
-const MEDIUM  = 44; // allows stage 1 (38 px), blocks stage 2 (50 px)
+// Gap sizes — set midway between adjacent stage heights for ~5px margin:
+//   NARROW: allows stage 0 (28px) and stage 1 (38px), blocks stage 2 (50px)
+//     → gap = (38 + 50) / 2 = 44 → but we use 43 to keep the delta from tunneling high
+const NARROW = Math.round((SIZE_STAGES[1].height + SIZE_STAGES[2].height) / 2) - 1; // 43
+//   MEDIUM: allows stage 0-3 (up to 64px), blocks stage 4 (80px)
+const MEDIUM  = Math.round((SIZE_STAGES[3].height + SIZE_STAGES[4].height) / 2);    // 72
 
 export const LEVEL_WIDTH  = 1440;
 export const LEVEL_HEIGHT = 560;
@@ -134,21 +138,21 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   // Controls
   scene.add.text(160, FLOOR_Y - 110, "← → Move\n↑ / SPACE Jump", hintStyle).setOrigin(0.5);
 
-  // Arrow above apple spawn
-  scene.add.text(280, FLOOR_Y - 90, "▼", { fontSize: "20px", color: "#27ae60", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
+  // Arrow + label above apple
+  scene.add.text(280, FLOOR_Y - 95, "▼ +1 size", { fontSize: "14px", color: "#27ae60", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
 
   // Before narrow duct
-  scene.add.text(510, FLOOR_Y - 70, "Too big? Wait to digest!", {
+  scene.add.text(505, FLOOR_Y - 72, "Narrow duct ahead!\nWait to burp if too big", {
     ...hintStyle, color: "#f39c12",
   }).setOrigin(0.5);
 
   // After narrow duct — unhealthy food hint
-  scene.add.text(960, FLOOR_Y - 100, "Unhealthy food\n×2 growth + ×2 score!", {
+  scene.add.text(960, FLOOR_Y - 105, "Junk food = +2 sizes\n+ ×2 score!", {
     ...hintStyle, color: "#ff6b9d",
   }).setOrigin(0.5);
 
   // Before medium duct
-  scene.add.text(1135, FLOOR_Y - 70, "Digest again →", {
+  scene.add.text(1140, FLOOR_Y - 72, "Too big? Burp once →", {
     ...hintStyle, color: "#f39c12",
   }).setOrigin(0.5);
 

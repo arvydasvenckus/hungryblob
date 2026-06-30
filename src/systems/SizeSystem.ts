@@ -1,18 +1,26 @@
 import type { StageIndex } from "../config/constants";
-import { SIZE_STAGES, MAX_FOOD, SHRINK_COOLDOWN_MS } from "../config/constants";
+import { SHRINK_COOLDOWN_MS } from "../config/constants";
 
 export type SizeEventType = "grow" | "shrink" | "maxed";
 
 export interface SizeEvent {
   type: SizeEventType;
   stage: StageIndex;
-  foodCount: number;
 }
 
 type SizeListener = (event: SizeEvent) => void;
 
+const MAX_STAGE = 4 as StageIndex;
+
+/**
+ * Direct stage-based growth model:
+ *   eat(1) → stage += 1   (healthy food)
+ *   eat(2) → stage += 2   (unhealthy food)
+ *   shrink  → stage -= 1  (one burp = one stage down)
+ * Stage is capped at MAX_STAGE (4). Burping continues on a timer
+ * until stage reaches 0.
+ */
 export class SizeSystem {
-  private foodCount = 0;
   private stage: StageIndex = 0;
   private lastEatTime = 0;
   private shrinkTimer: ReturnType<typeof setTimeout> | null = null;
@@ -28,33 +36,13 @@ export class SizeSystem {
     this.listeners.forEach((fn) => fn(event));
   }
 
-  private stageFor(food: number): StageIndex {
-    for (let i = SIZE_STAGES.length - 1; i >= 0; i--) {
-      if (food >= SIZE_STAGES[i].minFood) return i as StageIndex;
-    }
-    return 0;
-  }
-
-  /** @param amount 1 for healthy food, 2 for unhealthy food */
-  eat(amount: 1 | 2 = 1): boolean {
-    if (this.foodCount >= MAX_FOOD) return false;
-
-    this.foodCount = Math.min(this.foodCount + amount, MAX_FOOD);
+  /** @param growthStages 1 for healthy food, 2 for unhealthy food */
+  eat(growthStages: 1 | 2 = 1) {
     this.lastEatTime = this.getTime();
-
-    const newStage = this.stageFor(this.foodCount);
-    const grew = newStage > this.stage;
+    const newStage = Math.min(this.stage + growthStages, MAX_STAGE) as StageIndex;
     this.stage = newStage;
-
     this.scheduleShrink();
-
-    this.emit({
-      type: this.foodCount >= MAX_FOOD ? "maxed" : "grow",
-      stage: this.stage,
-      foodCount: this.foodCount,
-    });
-
-    return grew;
+    this.emit({ type: newStage >= MAX_STAGE ? "maxed" : "grow", stage: newStage });
   }
 
   private scheduleShrink() {
@@ -65,16 +53,14 @@ export class SizeSystem {
   private shrink() {
     if (this.stage === 0) return;
     this.stage = (this.stage - 1) as StageIndex;
-    this.foodCount = SIZE_STAGES[this.stage].maxFood;
-    this.emit({ type: "shrink", stage: this.stage, foodCount: this.foodCount });
+    this.emit({ type: "shrink", stage: this.stage });
     if (this.stage > 0) this.scheduleShrink();
   }
 
-  getStage(): StageIndex  { return this.stage; }
-  getFoodCount(): number  { return this.foodCount; }
+  getStage(): StageIndex { return this.stage; }
 
   getShrinkCooldownRemaining(): number {
-    if (this.shrinkTimer === null || this.foodCount === 0) return 0;
+    if (this.shrinkTimer === null || this.stage === 0) return 0;
     const elapsed = this.getTime() - this.lastEatTime;
     return Math.max(0, SHRINK_COOLDOWN_MS - elapsed);
   }
@@ -82,7 +68,6 @@ export class SizeSystem {
   reset() {
     if (this.shrinkTimer) clearTimeout(this.shrinkTimer);
     this.shrinkTimer = null;
-    this.foodCount = 0;
     this.stage = 0;
     this.lastEatTime = 0;
   }

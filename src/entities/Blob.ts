@@ -45,18 +45,22 @@ export class Blob {
   //  causing the "fall through floor" bug.)
 
   private applyStage(stage: StageIndex) {
+    const physBody = this.body.body as Phaser.Physics.Arcade.Body;
+    const prevBottom = physBody.bottom; // save before resize
+
     this.stage = stage;
     const { scale, width, height } = SIZE_STAGES[stage];
 
-    // 1. Set correct scale and body size immediately.
     this.body.setScale(scale);
     this.body.setSize(width, height);
 
-    // 2. If not eating, refresh idle anim now.
+    // setSize() keeps body.y fixed but grows height downward, sinking the
+    // body below the floor. Restore the bottom edge to its original position.
+    physBody.y = prevBottom - height;
+
     if (!this.isEating) this.refreshAnim();
 
-    // 3. Visual X-only squash-bounce for grow feedback.
-    this.scene.tweens.killTweensOf(this.body); // cancel any lingering scale tweens
+    this.scene.tweens.killTweensOf(this.body);
     this.scene.tweens.add({
       targets: this.body,
       scaleX: scale * 1.32,
@@ -102,10 +106,14 @@ export class Blob {
 
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
               // Phase 4: snap to new size immediately, then X-bounce
+              const physBody = this.body.body as Phaser.Physics.Arcade.Body;
+              const prevBottom = physBody.bottom;
               const { scale, width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
               this.body.setScale(scale);
               this.body.setSize(width, height);
+              // Keep body bottom stable (shrinking would lift body off floor otherwise)
+              physBody.y = prevBottom - height;
 
               // Wide pop then settle
               this.scene.tweens.add({
