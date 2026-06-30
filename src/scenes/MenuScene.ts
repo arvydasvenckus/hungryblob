@@ -34,8 +34,9 @@ export class MenuScene extends Phaser.Scene {
       fontFamily: "monospace",
     }).setOrigin(0.5);
 
-    // Animated Bob preview
+    // Animated Bob preview — scale 2 matches the ~1.93× camera zoom in-game
     const bob = this.add.sprite(GAME_WIDTH / 2, 556, "blob_stage0", 0);
+    bob.setScale(2);
     bob.play("blob_idle_0");
     this.tweens.add({
       targets: bob,
