@@ -4,112 +4,126 @@ import {
   SIZE_STAGES,
   STAGE_JUMP_VELOCITY,
   STAGE_WALK_SPEED,
-  SHRINK_TWEEN_MS,
 } from "../config/constants";
 import { SizeSystem } from "../systems/SizeSystem";
 
 export class Blob {
   readonly body: Phaser.Physics.Arcade.Sprite;
   private scene: Phaser.Scene;
-  private sizeSystem: SizeSystem;
   private stage: StageIndex = 0;
   private isBurping = false;
+  private isEating  = false;
   private isStressed = false;
   private isSad = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, sizeSystem: SizeSystem) {
     this.scene = scene;
-    this.sizeSystem = sizeSystem;
 
     this.body = scene.physics.add.sprite(x, y, "blob_stage0", 0);
     this.body.setCollideWorldBounds(true);
-    this.body.setSize(SIZE_STAGES[0].width, SIZE_STAGES[0].height);
     this.body.setGravityY(0);
+    // Set initial scale + body size correctly at scale 1.0
+    this.body.setScale(SIZE_STAGES[0].scale);
+    this.body.setSize(SIZE_STAGES[0].width, SIZE_STAGES[0].height);
     this.body.play("blob_idle_0");
 
     sizeSystem.onSizeChange((evt) => {
       if (evt.type === "grow" || evt.type === "maxed") {
-        this.applyStage(evt.stage as StageIndex, false);
+        this.applyStage(evt.stage as StageIndex);
       } else if (evt.type === "shrink") {
         this.triggerBurp(evt.stage as StageIndex);
       }
     });
   }
 
-  // ─── Stage / size ──────────────────────────────────────────────────────────
+  // ─── Stage transitions ─────────────────────────────────────────────────────
+  //
+  // KEY RULE: setScale() + setSize() are ALWAYS called first, before any tween.
+  // This keeps the physics body at the correct position throughout.
+  // All squash/stretch tweens only touch scaleX — never scaleY.
+  // (Tweening scaleY changes displayOriginY which shifts the body vertically,
+  //  causing the "fall through floor" bug.)
 
-  private applyStage(stage: StageIndex, instant: boolean) {
+  private applyStage(stage: StageIndex) {
     this.stage = stage;
     const { scale, width, height } = SIZE_STAGES[stage];
 
-    if (instant) {
-      this.body.setScale(scale);
-      this.body.setSize(width, height);
-      this.refreshAnim();
-    } else {
-      this.scene.tweens.add({
-        targets: this.body,
-        scaleX: scale,
-        scaleY: scale * 1.18,
-        duration: 110,
-        ease: "Back.Out",
-        onComplete: () => {
-          this.scene.tweens.add({
-            targets: this.body,
-            scaleY: scale,
-            duration: 80,
-            ease: "Sine.Out",
-          });
-          this.body.setSize(width, height);
-          this.refreshAnim();
-        },
-      });
-    }
+    // 1. Set correct scale and body size immediately.
+    this.body.setScale(scale);
+    this.body.setSize(width, height);
+
+    // 2. If not eating, refresh idle anim now.
+    if (!this.isEating) this.refreshAnim();
+
+    // 3. Visual X-only squash-bounce for grow feedback.
+    this.scene.tweens.killTweensOf(this.body); // cancel any lingering scale tweens
+    this.scene.tweens.add({
+      targets: this.body,
+      scaleX: scale * 1.32,
+      duration: 80,
+      ease: "Back.Out",
+      onComplete: () => {
+        this.scene.tweens.add({
+          targets: this.body,
+          scaleX: scale,
+          duration: 140,
+          ease: "Elastic.Out",
+        });
+      },
+    });
   }
 
-  // ─── Burp (shrink) ─────────────────────────────────────────────────────────
+  // ─── Burp / shrink ─────────────────────────────────────────────────────────
 
   private triggerBurp(newStage: StageIndex) {
     if (this.isBurping) return;
     this.isBurping = true;
 
-    const currentScale = SIZE_STAGES[this.stage].scale;
-    const targetScale  = SIZE_STAGES[newStage].scale;
+    const oldScale = SIZE_STAGES[this.stage].scale;
 
-    // Phase 1: squash flat (cheeks puffed)
+    // Phase 1: puff wide (X only — scaleY never touched)
+    this.scene.tweens.killTweensOf(this.body);
     this.scene.tweens.add({
       targets: this.body,
-      scaleX: currentScale * 1.35,
-      scaleY: currentScale * 0.65,
+      scaleX: oldScale * 1.45,
       duration: 100,
       ease: "Sine.Out",
       onComplete: () => {
-        // Phase 2: stretch tall (winding up)
+        // Phase 2: compress → winding up
         this.scene.tweens.add({
           targets: this.body,
-          scaleX: currentScale * 0.8,
-          scaleY: currentScale * 1.4,
-          duration: 100,
+          scaleX: oldScale * 0.72,
+          duration: 90,
           ease: "Sine.In",
           onComplete: () => {
-            // Phase 3: play burp anim frames + show BURP! text
+            // Phase 3: play burp anim + BURP! bubble
             this.body.play(`blob_burp_${this.stage}`, true);
             this.spawnBurpBubble();
 
-            // Phase 4: after burp frames, tween to new size
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+              // Phase 4: snap to new size immediately, then X-bounce
+              const { scale, width, height } = SIZE_STAGES[newStage];
+              this.stage = newStage;
+              this.body.setScale(scale);
+              this.body.setSize(width, height);
+
+              // Wide pop then settle
               this.scene.tweens.add({
                 targets: this.body,
-                scaleX: targetScale,
-                scaleY: targetScale,
-                duration: SHRINK_TWEEN_MS,
-                ease: "Elastic.Out",
+                scaleX: scale * 1.3,
+                duration: 70,
+                ease: "Back.Out",
                 onComplete: () => {
-                  this.isBurping = false;
-                  this.stage = newStage;
-                  const { width, height } = SIZE_STAGES[newStage];
-                  this.body.setSize(width, height);
-                  this.refreshAnim();
+                  this.scene.tweens.add({
+                    targets: this.body,
+                    scaleX: scale,
+                    duration: 260,
+                    ease: "Elastic.Out",
+                    onComplete: () => {
+                      this.isBurping = false;
+                      this.refreshAnim();
+                    },
+                  });
                 },
               });
             });
@@ -120,8 +134,9 @@ export class Blob {
   }
 
   private spawnBurpBubble() {
-    const x = this.body.x + SIZE_STAGES[this.stage].width * 0.6;
-    const y = this.body.y - SIZE_STAGES[this.stage].height * 0.7;
+    const { width, height } = SIZE_STAGES[this.stage];
+    const x = this.body.x + width * 0.55;
+    const y = this.body.y - height * 0.8;
 
     const bubble = this.scene.add.text(x, y, "BURP!", {
       fontSize: "22px",
@@ -133,41 +148,38 @@ export class Blob {
 
     this.scene.tweens.add({
       targets: bubble,
-      x: x + 20,
-      y: y - 50,
-      angle: 12,
+      x: x + 18,
+      y: y - 55,
+      angle: 10,
       alpha: 0,
-      scaleX: 1.4,
-      scaleY: 1.4,
-      duration: 900,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 950,
       ease: "Quad.Out",
       onComplete: () => bubble.destroy(),
     });
   }
 
-  // ─── Stress & sad states ───────────────────────────────────────────────────
+  // ─── Stress & sad ──────────────────────────────────────────────────────────
 
   setStressed(on: boolean) {
     if (this.isStressed === on || this.isBurping || this.isSad) return;
     this.isStressed = on;
-    if (on) {
-      this.body.play(`blob_stress_${this.stage}`, true);
-    } else {
-      this.refreshAnim();
-    }
+    if (on) this.body.play(`blob_stress_${this.stage}`, true);
+    else    this.refreshAnim();
   }
 
   playSadAnim() {
     this.isSad = true;
     this.body.play(`blob_sad_${this.stage}`, true);
-    // Grayscale via tint (desaturate approximation)
     this.body.setTint(0x888888);
   }
 
   // ─── Animation helpers ─────────────────────────────────────────────────────
 
   private refreshAnim() {
-    if (this.isSad) return;
+    // Never interrupt eating or sad animations
+    if (this.isEating || this.isSad) return;
     const base = this.isStressed
       ? `blob_stress_${this.stage}`
       : `blob_idle_${this.stage}`;
@@ -176,18 +188,16 @@ export class Blob {
     }
   }
 
-  // ─── Update (called every frame) ───────────────────────────────────────────
+  // ─── Frame loop ────────────────────────────────────────────────────────────
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (this.isBurping || this.isSad) return;
 
     const physBody = this.body.body as Phaser.Physics.Arcade.Body;
     const onGround = physBody.blocked.down;
-
     const jumpVel  = STAGE_JUMP_VELOCITY[this.stage];
     const walkSpd  = STAGE_WALK_SPEED[this.stage];
 
-    // Horizontal movement
     if (cursors.left.isDown) {
       this.body.setVelocityX(-walkSpd);
       this.body.setFlipX(true);
@@ -198,46 +208,44 @@ export class Blob {
       this.body.setVelocityX(0);
     }
 
-    // Jump
     if ((cursors.up.isDown || cursors.space?.isDown) && onGround) {
       this.body.setVelocityY(jumpVel);
     }
 
-    // Animation state machine
-    const vx = physBody.velocity.x;
-    const vy = physBody.velocity.y;
-    const s  = this.stage;
+    // Don't override the eat animation in the state machine
+    if (this.isEating) return;
+
+    const vx  = physBody.velocity.x;
+    const vy  = physBody.velocity.y;
+    const s   = this.stage;
+    const cur = this.body.anims.currentAnim?.key ?? "";
 
     if (!onGround) {
       const airKey = vy > 0 ? `blob_fall_${s}` : `blob_jump_${s}`;
-      const cur = this.body.anims.currentAnim?.key ?? "";
       if (!cur.startsWith("blob_jump") && !cur.startsWith("blob_fall")) {
         this.body.play(airKey, true);
       }
     } else if (Math.abs(vx) > 10) {
       const walkKey = `blob_walk_${s}`;
-      if (!this.body.anims.currentAnim?.key.startsWith(walkKey)) {
-        this.body.play(walkKey, true);
-      }
+      if (!cur.startsWith(walkKey)) this.body.play(walkKey, true);
     } else {
       const idleKey = this.isStressed ? `blob_stress_${s}` : `blob_idle_${s}`;
-      if (!this.body.anims.currentAnim?.key.startsWith(idleKey)) {
-        this.body.play(idleKey, true);
-      }
+      if (!cur.startsWith(idleKey)) this.body.play(idleKey, true);
     }
   }
 
-  // ─── Eat animation (plays then returns to idle) ────────────────────────────
+  // ─── Eat animation ─────────────────────────────────────────────────────────
 
   playEatAnim(onComplete?: () => void) {
+    this.isEating = true;
     this.body.play(`blob_eat_${this.stage}`, true);
     this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.isEating = false;
       this.refreshAnim();
       onComplete?.();
     });
   }
 
   getStage(): StageIndex { return this.stage; }
-
-  destroy() { this.body.destroy(); }
+  destroy()              { this.body.destroy(); }
 }

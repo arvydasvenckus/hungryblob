@@ -78,6 +78,11 @@ export class GameScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
+    // Always ensure UIScene runs alongside — safe to call even if already active
+    if (!this.scene.isActive("UIScene")) {
+      this.scene.launch("UIScene");
+    }
+
     // Size → UI events + sounds
     this.sizeSystem.onSizeChange((evt) => {
       const ui = this.scene.get("UIScene");

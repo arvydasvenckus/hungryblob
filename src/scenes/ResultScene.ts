@@ -65,10 +65,16 @@ export class ResultScene extends Phaser.Scene {
       fontFamily: "monospace",
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    retry.on("pointerdown", () => this.restart());
-    menu.on("pointerdown",  () => this.goMenu());
-    this.input.keyboard!.on("keydown-ENTER", () => this.restart());
-    this.input.keyboard!.on("keydown-M",     () => this.goMenu());
+    let transitioning = false;
+    const safeRestart = () => { if (!transitioning) { transitioning = true; this.restart(); } };
+    const safeMenu    = () => { if (!transitioning) { transitioning = true; this.goMenu(); } };
+
+    retry.on("pointerup",  safeRestart);
+    retry.on("pointerdown", safeRestart);
+    menu.on("pointerup",   safeMenu);
+    menu.on("pointerdown", safeMenu);
+    this.input.keyboard!.on("keydown-ENTER", safeRestart);
+    this.input.keyboard!.on("keydown-M",     safeMenu);
 
     this.tweens.add({ targets: retry, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
   }
@@ -76,7 +82,6 @@ export class ResultScene extends Phaser.Scene {
   private restart() {
     const { level } = (this as any)._data as { level: number };
     this.scene.start("GameScene", { level });
-    this.scene.launch("UIScene");
   }
 
   private goMenu() {
