@@ -45,18 +45,17 @@ export class Blob {
   //  causing the "fall through floor" bug.)
 
   private applyStage(stage: StageIndex) {
-    const physBody = this.body.body as Phaser.Physics.Arcade.Body;
-    const prevBottom = physBody.bottom; // save before resize
-
+    const prevH = SIZE_STAGES[this.stage].height;
     this.stage = stage;
     const { scale, width, height } = SIZE_STAGES[stage];
 
+    // body.bottom = sprite.y + height/2  (Phaser recomputes this in preUpdate).
+    // To keep body.bottom constant when height changes, adjust sprite.y BEFORE
+    // calling setScale/setSize so preUpdate() sees the corrected position.
+    this.body.y -= (height - prevH) / 2;
+
     this.body.setScale(scale);
     this.body.setSize(width, height);
-
-    // setSize() keeps body.y fixed but grows height downward, sinking the
-    // body below the floor. Restore the bottom edge to its original position.
-    physBody.y = prevBottom - height;
 
     if (!this.isEating) this.refreshAnim();
 
@@ -105,15 +104,13 @@ export class Blob {
             this.spawnBurpBubble();
 
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Phase 4: snap to new size immediately, then X-bounce
-              const physBody = this.body.body as Phaser.Physics.Arcade.Body;
-              const prevBottom = physBody.bottom;
+              // Phase 4: snap to smaller size, same body.bottom correction as applyStage
+              const prevH = SIZE_STAGES[this.stage].height;
               const { scale, width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
+              this.body.y -= (height - prevH) / 2; // prevH > height → moves sprite down
               this.body.setScale(scale);
               this.body.setSize(width, height);
-              // Keep body bottom stable (shrinking would lift body off floor otherwise)
-              physBody.y = prevBottom - height;
 
               // Wide pop then settle
               this.scene.tweens.add({
