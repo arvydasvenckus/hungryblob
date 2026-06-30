@@ -130,19 +130,20 @@ export class GameScene extends Phaser.Scene {
 
   private eatFood(food: Food) {
     if (!food.sprite.active) return;
+    // Mark inactive IMMEDIATELY — disableBody(false,false) leaves active=true,
+    // letting the overlap fire again in the same physics step (double-eat).
+    food.sprite.setActive(false);
+    food.sprite.disableBody(true, false); // disable physics, keep visible for tween
 
     const type     = food.foodType;
     const category = getFoodCategory(type);
     const growth   = getFoodGrowth(type);
     const pts      = getFoodScore(type);
 
-    // Play sound before removing sprite
     if (category === "healthy") this.soundSystem.eatHealthy();
     else                        this.soundSystem.eatUnhealthy();
 
-    // Swallow tween: food flies into Bob's mouth then vanishes
     const foodSprite = food.sprite;
-    foodSprite.disableBody(false, false); // keep visible but disable physics
     this.foods = this.foods.filter((f) => f !== food);
 
     this.tweens.add({

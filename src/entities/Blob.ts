@@ -45,17 +45,22 @@ export class Blob {
   //  causing the "fall through floor" bug.)
 
   private applyStage(stage: StageIndex) {
-    const prevH = SIZE_STAGES[this.stage].height;
+    const pb = this.body.body as Phaser.Physics.Arcade.Body;
+    // Save bottom BEFORE resize — this is the ground (or air) position to preserve.
+    const prevBottom = pb.bottom;
+
     this.stage = stage;
     const { scale, width, height } = SIZE_STAGES[stage];
 
-    // body.bottom = sprite.y + height/2  (Phaser recomputes this in preUpdate).
-    // To keep body.bottom constant when height changes, adjust sprite.y BEFORE
-    // calling setScale/setSize so preUpdate() sees the corrected position.
-    this.body.y -= (height - prevH) / 2;
-
     this.body.setScale(scale);
     this.body.setSize(width, height);
+
+    // After setSize: pb.height = newH but pb.position.y is still the old value,
+    // so pb.bottom = old_pos + newH (may be below floor).
+    // Setting pb.position.y directly fixes it for the current physics step.
+    // postUpdate() then writes  sprite.y = pb.position.y + pb.halfHeight
+    // so the next frame's preUpdate() also lands correctly.
+    pb.position.y = prevBottom - height;
 
     if (!this.isEating) this.refreshAnim();
 
@@ -104,13 +109,14 @@ export class Blob {
             this.spawnBurpBubble();
 
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Phase 4: snap to smaller size, same body.bottom correction as applyStage
-              const prevH = SIZE_STAGES[this.stage].height;
+              // Phase 4: snap to smaller size — same correction as applyStage
+              const pb2 = this.body.body as Phaser.Physics.Arcade.Body;
+              const prevBottom2 = pb2.bottom;
               const { scale, width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
-              this.body.y -= (height - prevH) / 2; // prevH > height → moves sprite down
               this.body.setScale(scale);
               this.body.setSize(width, height);
+              pb2.position.y = prevBottom2 - height;
 
               // Wide pop then settle
               this.scene.tweens.add({
