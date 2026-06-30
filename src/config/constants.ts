@@ -17,7 +17,7 @@ export const SIZE_STAGES = [
 ] as const;
 
 export const MAX_FOOD = 23;
-export const SHRINK_COOLDOWN_MS = 10_000;
+export const SHRINK_COOLDOWN_MS = 6_667;
 export const SHRINK_TWEEN_MS    = 500;
 
 // Per-stage physics — bigger Bob feels heavier; gentle linear reduction across 8 stages

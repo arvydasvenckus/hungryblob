@@ -38,7 +38,6 @@ export class SizeSystem {
 
   /** @param growthStages 1 for healthy food, 2 for unhealthy food */
   eat(growthStages: 1 | 2 = 1) {
-    this.lastEatTime = this.getTime();
     const newStage = Math.min(this.stage + growthStages, MAX_STAGE) as StageIndex;
     this.stage = newStage;
     this.scheduleShrink();
@@ -47,6 +46,9 @@ export class SizeSystem {
 
   private scheduleShrink() {
     if (this.shrinkTimer) clearTimeout(this.shrinkTimer);
+    // Update lastEatTime here so getShrinkCooldownRemaining() always measures
+    // from when THIS timer was scheduled — whether triggered by eat() or shrink().
+    this.lastEatTime = this.getTime();
     this.shrinkTimer = setTimeout(() => this.shrink(), SHRINK_COOLDOWN_MS);
   }
 

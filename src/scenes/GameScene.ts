@@ -81,7 +81,6 @@ export class GameScene extends Phaser.Scene {
 
       if (evt.type === "shrink") {
         this.soundSystem.burp();
-        ui.events.emit("show-message", "BURP! Getting smaller...", "#6fdc8c");
       } else if (evt.type === "grow" || evt.type === "maxed") {
         this.soundSystem.grow();
       }

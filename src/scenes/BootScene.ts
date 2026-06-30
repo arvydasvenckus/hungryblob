@@ -91,6 +91,7 @@ export class BootScene extends Phaser.Scene {
     let stressed = false;
     let sad = false;
     let sweatDrops = false;
+    let burpRipple = -1; // 0/1/2 = which ripple phase; -1 = not a burp frame
 
     if (anim === "idle") {
       const breathe = Math.sin(f * 1.6) * 0.022;
@@ -110,11 +111,16 @@ export class BootScene extends Phaser.Scene {
       else if (f === 2) { sx = 1.15; sy = 0.85; mouthMode = "huge"; }
       else { sx = 1.04; sy = 0.96; mouthMode = "normal"; }
     } else if (anim === "burp") {
-      if (f === 0) { sx = 1.35; sy = 0.65; }
-      else if (f === 1) { sx = 0.78; sy = 1.42; }
-      else if (f === 2) { sx = 1.0;  sy = 1.2;  mouthMode = "burp_open"; }
-      else if (f === 3) { sx = 1.05; sy = 1.08; mouthMode = "burp_open"; }
-      else { sx = 1.0;  sy = 1.0; }
+      // F0: shock squash — wide flat anticipation, eyes wide
+      // F1: puff up tall — compressed cheeks, first burst
+      // F2: wide burst — widest mouth, strongest gas wave
+      // F3: ripple — secondary wave, different phase
+      // F4: settle — last puff fading
+      if      (f === 0) { sx = 1.6;  sy = 0.48; eyeOffY = -2; }
+      else if (f === 1) { sx = 0.58; sy = 1.72; mouthMode = "burp_open"; burpRipple = 0; eyeOffY = 3; }
+      else if (f === 2) { sx = 1.22; sy = 1.28; mouthMode = "burp_open"; burpRipple = 1; eyeOffY = 1; }
+      else if (f === 3) { sx = 0.82; sy = 1.18; mouthMode = "burp_open"; burpRipple = 2; }
+      else              { sx = 1.06; sy = 1.06; mouthMode = "burp_open"; burpRipple = 0; }
     } else if (anim === "stress") {
       const shake = Math.sin(f * 2.8) * 0.04;
       sx = 1 + shake; sy = 1 - shake;
@@ -135,6 +141,17 @@ export class BootScene extends Phaser.Scene {
     // Body
     g.fillStyle(color, 1);
     g.fillRoundedRect(bx, by, bw, bh, r * Math.max(sx, 0.5));
+
+    // Puffed burp frames: equatorial bulge — widens the body shape itself, no separate shapes
+    if (anim === "burp" && f >= 1) {
+      g.fillStyle(color, 1);
+      g.fillEllipse(cx, by + bh * 0.5, bw * 1.28, bh * 0.44);
+      // Soft rosy blush — fully inside body, just a tint
+      g.fillStyle(0xff9f9f, 0.18);
+      g.fillEllipse(bx + bw * 0.18, by + bh * 0.5, bw * 0.28, bh * 0.22);
+      g.fillEllipse(bx + bw * 0.82, by + bh * 0.5, bw * 0.28, bh * 0.22);
+      g.fillStyle(color, 1);
+    }
 
     // Highlight shine
     g.fillStyle(0xffffff, 0.2);
@@ -208,19 +225,33 @@ export class BootScene extends Phaser.Scene {
         g.fillRect(cx - mw * 0.4 + i * mw * 0.28, mouthCY - bh * 0.01, mw * 0.22, bh * 0.1);
       }
     } else if (mouthMode === "burp_open") {
-      const mw = bw * 0.62;
-      const mh = bh * 0.42;
+      // Mouth size varies by ripple phase — widest on the main burst (phase 1)
+      const mwMul = burpRipple === 1 ? 0.78 : burpRipple === 0 ? 0.68 : 0.6;
+      const mhMul = burpRipple === 1 ? 0.46 : burpRipple === 0 ? 0.5  : 0.38;
+      const mw = bw * mwMul;
+      const mh = bh * mhMul;
       g.fillStyle(0x1a1a2e, 1);
       g.fillEllipse(cx, mouthCY + bh * 0.04, mw, mh);
       g.fillStyle(0xe74c3c, 1);
-      g.fillEllipse(cx, mouthCY + bh * 0.1, mw * 0.6, mh * 0.5);
-      // Wavy lines to suggest belch
-      g.lineStyle(2, 0xf1c40f, 0.7);
-      for (let l = 0; l < 2; l++) {
+      g.fillEllipse(cx, mouthCY + bh * 0.1, mw * 0.58, mh * 0.52);
+      // Sinusoidal gas waves — amplitude and phase shift per ripple stage
+      const waveCount = burpRipple === 1 ? 3 : 2;
+      const amplitude = bh * (burpRipple === 1 ? 0.06 : burpRipple === 0 ? 0.045 : 0.032);
+      const phaseShift = burpRipple === 2 ? Math.PI * 0.6 : 0;
+      const x0 = cx - mw * 0.44;
+      const x1 = cx + mw * 0.44;
+      const steps = 10;
+      for (let wl = 0; wl < waveCount; wl++) {
+        const baseY = mouthCY - bh * (0.09 + wl * 0.07);
+        const alpha = 0.85 - wl * 0.22;
+        g.lineStyle(Math.max(1.5, bw * 0.025), 0x82e0aa, alpha);
         g.beginPath();
-        g.moveTo(cx - mw * 0.25, mouthCY - bh * 0.06 - l * 6);
-        g.lineTo(cx, mouthCY - bh * 0.1 - l * 6);
-        g.lineTo(cx + mw * 0.25, mouthCY - bh * 0.07 - l * 6);
+        g.moveTo(x0, baseY);
+        for (let s = 1; s <= steps; s++) {
+          const wx = x0 + (s / steps) * (x1 - x0);
+          const wy = baseY + Math.sin((s / steps) * Math.PI * 2.5 + phaseShift) * amplitude;
+          g.lineTo(wx, wy);
+        }
         g.strokePath();
       }
     } else if (sad) {

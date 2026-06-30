@@ -85,47 +85,47 @@ export class Blob {
     this.isBurping = true;
 
     this.scene.tweens.killTweensOf(this.visual);
-    // Phase 1: puff wide (relative to scale 1)
+
+    // Phase 1: shock squash — wide flat, both axes
     this.scene.tweens.add({
       targets: this.visual,
-      scaleX: 1.45,
-      duration: 100,
-      ease: "Sine.Out",
+      scaleX: 1.55,
+      scaleY: 0.52,
+      duration: 110,
+      ease: "Sine.In",
       onComplete: () => {
-        // Phase 2: compress
+        // Phase 2: puff up tall — compressed sides, air rising
         this.scene.tweens.add({
           targets: this.visual,
-          scaleX: 0.72,
-          duration: 90,
-          ease: "Sine.In",
+          scaleX: 0.6,
+          scaleY: 1.7,
+          duration: 130,
+          ease: "Sine.Out",
           onComplete: () => {
-            // Phase 3: burp anim + bubble
+            // Phase 3: reset scale cleanly, then play burp frames
+            this.visual.setScale(1);
             this.visual.play(`blob_burp_${this.stage}`, true);
             this.spawnBurpBubble();
 
             this.visual.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Phase 4: resize + bounce
+              // Phase 4: physics resize, then swap texture at the old/new size ratio
+              // so the visual appears to shrink smoothly rather than snapping.
+              const oldW = SIZE_STAGES[this.stage].width;
               const { width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
-              this.physics.resize(width, height); // pure arithmetic, always correct
-              this.visual.setScale(1);
-
+              this.physics.resize(width, height);
+              const scaleRatio = oldW / width;
+              this.visual.play(`blob_idle_${newStage}`, true);
+              this.visual.setScale(scaleRatio);
               this.scene.tweens.add({
                 targets: this.visual,
-                scaleX: 1.3,
-                duration: 70,
-                ease: "Back.Out",
+                scaleX: 1,
+                scaleY: 1,
+                duration: SHRINK_TWEEN_MS,
+                ease: "Elastic.Out",
                 onComplete: () => {
-                  this.scene.tweens.add({
-                    targets: this.visual,
-                    scaleX: 1,
-                    duration: SHRINK_TWEEN_MS,
-                    ease: "Elastic.Out",
-                    onComplete: () => {
-                      this.isBurping = false;
-                      this.refreshAnim();
-                    },
-                  });
+                  this.isBurping = false;
+                  this.refreshAnim();
                 },
               });
             });
@@ -137,23 +137,29 @@ export class Blob {
 
   private spawnBurpBubble() {
     const { width, height } = SIZE_STAGES[this.stage];
-    const x = this.visual.x + width * 0.55;
-    const y = this.visual.y - height * 0.8;
+    const x = this.visual.x + width * 0.42;
+    const y = this.visual.y - height * 0.44;
+    const fontSize = Math.max(11, Math.round(width * 0.2));
 
-    const bubble = this.scene.add.text(x, y, "BURP!", {
-      fontSize: "22px",
+    const bubble = this.scene.add.text(x, y, "burp!", {
+      fontSize: `${fontSize}px`,
       color: "#f1c40f",
       fontFamily: "monospace",
-      stroke: "#000000",
-      strokeThickness: 3,
-    }).setOrigin(0).setDepth(10);
+      fontStyle: "bold",
+      stroke: "#1a1a2e",
+      strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(10);
 
     this.scene.tweens.add({
       targets: bubble,
-      x: x + 18, y: y - 55,
-      angle: 10, alpha: 0,
-      scaleX: 1.5, scaleY: 1.5,
-      duration: 950, ease: "Quad.Out",
+      y:     y - height * 0.75,
+      x:     x + width * 0.25,
+      alpha: 0,
+      angle: 10,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      duration: 950,
+      ease: "Quad.Out",
       onComplete: () => bubble.destroy(),
     });
   }
