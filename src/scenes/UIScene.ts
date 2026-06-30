@@ -132,9 +132,7 @@ export class UIScene extends Phaser.Scene {
 
   private onExitUnlocked() {
     this.goalText.setText("✓ EXIT OPEN").setColor("#6fdc8c");
-    this.time.delayedCall(2000, () => {
-      if (this.goalText?.active) this.goalText.setVisible(false);
-    });
+    // Stays visible permanently — no auto-hide
   }
 
   private setScore(score: number) {

@@ -113,9 +113,12 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   //   → traverse tunnel left → reach open dead-end → get watermelon → backtrack right
   //   → drop to floor at x=1850 → go right to exit (200 pts)
 
-  // Left wall removed — main floor path is unobstructed under the elevated platform.
-  // Dead end is the left edge of the platform (Bob falls off at x=1300).
+  // Main floor (y=528) is unobstructed under the elevated platform.
+  // LEFT BARRIER at x=1460 (ceiling → platform): tunnel is only accessible from the RIGHT.
+  // Players can jump onto the platform at x=1300-1460 (left section) but are stopped
+  // at x=1460 by the barrier — they must instead jump up at x=1810-1850 to enter the tunnel.
   wall(1300, 424, 550, T);           // platform floor: x=1300–1850, top at y=424
+  wall(1460, T,   T,   424 - T);    // left tunnel barrier: x=1460, y=32–424 (ceiling to platform)
   wall(1460, 317, 350, T);           // tunnel ceiling: x=1460–1810, bottom at y=349, gap=75px
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
