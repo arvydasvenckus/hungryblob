@@ -76,8 +76,8 @@ export const LEVELS: LevelConfig[] = [
       { x: 800,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts
       // After the stack — junk food lesson
       { x: 1200, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts
-      // Inside L-tunnel — bonus requiring tunnel navigation (stages 0-1 only fit 56px gap)
-      { x: 1600, y: 400, type: "watermelon" }, // +1;  50 pts
+      // Inside open dead-end chamber of L-section (x=1300-1460, no ceiling → safe to eat)
+      { x: 1420, y: 400, type: "watermelon" }, // +1;  50 pts  (y=424-24=400 above platform)
     ],
   },
 

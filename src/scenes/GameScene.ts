@@ -102,15 +102,19 @@ export class GameScene extends Phaser.Scene {
         this.soundSystem.burp(Math.min(7, evt.stage + 1) as StageIndex);
         if (this.levelIndex === 0 && evt.stage === 0) {
           // Bob just shrank back to stage 0 — hide the "wait" hints
-          this.hideTutHint("grew1"); this.hideTutHint("grew2"); this.hideTutHint("ring");
+          this.hideTutHint("grew1"); this.hideTutHint("grew2");
         }
       } else if (evt.type === "grow" || evt.type === "maxed") {
         this.soundSystem.grow();
         if (this.levelIndex === 0 && evt.stage === 1 && !this.tutShown.has("grew1")) {
-          // Bob just ate the first food and grew — show the "wait to shrink" cluster
+          // Bob just ate the first food and grew — hide the "eat" hint and show the wait cluster
+          this.hideTutHint("eat");
           this.showTutHint("grew1", 0);
           this.showTutHint("grew2", 600);
-          this.showTutHint("ring",  1200);
+          // Ring hint is now a UIScene screen-space highlight
+          this.time.delayedCall(1200, () => {
+            this.scene.get("UIScene")?.events.emit("show-ring-hint");
+          });
         }
       }
     });
@@ -349,18 +353,18 @@ export class GameScene extends Phaser.Scene {
       const t = this.add.text(x, y, text, {
         fontSize: "14px", color, fontFamily: "monospace",
         stroke: "#000", strokeThickness: 3, align: "center",
-      }).setOrigin(0.5).setAlpha(0).setDepth(8);
+      }).setOrigin(0.5).setAlpha(0).setDepth(-1);
       this.tutHints.set(key, t);
     };
 
-    add("move",  400, FLOOR - 120, "← → Move     ↑ / SPACE Jump");
-    add("eat",   800, FLOOR - 110, "▼  Eat this to grow!");
-    add("grew1", 870, FLOOR -  80, "You grew! The gap is now too narrow.");
-    add("grew2", 870, FLOOR - 118, "Stand here and wait...");
-    add("ring",  870, FLOOR - 160, "↗  Watch the ring in the top-right.\nWhen it fills — Bob burps and shrinks!");
-    add("junk", 1200, FLOOR - 120, "▼  JUNK FOOD — 2× points but 2× growth!\nEat wisely.", "#ff6b9d");
-    add("tunnel",1600,  336 -  44, "Jump up here!\nOnly small Bob fits → bonus food inside.", "#f1c40f");
-    add("goback",2200, FLOOR - 100, "Not enough points?\nGo back — there's food in the tunnel! ←");
+    add("move",  400,  FLOOR - 120, "← → Move     ↑ / SPACE Jump");
+    add("eat",   800,  FLOOR - 110, "▼  Eat this to grow!");
+    add("grew1", 870,  FLOOR -  80, "You grew! The gap is now too narrow.");
+    add("grew2", 870,  FLOOR - 118, "Stand here and wait — Bob digests automatically.");
+    // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
+    add("junk",  1200, FLOOR - 120, "▼  JUNK FOOD — 2× points but 2× growth!\nEat wisely.", "#ff6b9d");
+    add("tunnel",1830, 424  -  44,  "↑  Jump up here!\n← food hidden inside", "#f1c40f");
+    add("goback",2200, FLOOR - 100, "Not enough points?\nGo back — jump up at the L-section! ←");
   }
 
   private showTutHint(key: string, delayMs = 0) {
@@ -405,9 +409,9 @@ export class GameScene extends Phaser.Scene {
       this.hideTutHint("junk");
     }
 
-    // Zone 4: L-tunnel hint — show when near tunnel entrance
-    if (!shown.has("tunnel") && bx > 1330 && bx < 1860) this.showTutHint("tunnel");
-    if (shown.has("tunnel") && !shown.has("tunnel-hide") && bx > 1860) {
+    // Zone 4: L-section hint — show near the right-side entry (x=1810-1850)
+    if (!shown.has("tunnel") && bx > 1700 && bx < 1900) this.showTutHint("tunnel");
+    if (shown.has("tunnel") && !shown.has("tunnel-hide") && bx > 1950) {
       shown.add("tunnel-hide");
       this.hideTutHint("tunnel");
     }

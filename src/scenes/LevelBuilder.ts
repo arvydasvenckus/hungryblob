@@ -94,23 +94,28 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   wall(900,  T,    160, 230); // upper beam — ceiling to y=262
   wall(900,  390,  160, 101); // lower beam — y=390 to y=491
 
-  // ── L-SHAPED TUNNEL (x=1400–1800): the backtrack section ──────────────────
+  // ── L-SECTION (L rotated 90° CW): sealed left wall, right-side entry ─────
   //
-  // Shape (Γ / rotated-L):
-  //   vertical arm  — jump up at x=1400 from floor (y=528) to tunnel floor (y=424)
-  //   horizontal arm — narrow tunnel from x=1400 to x=1800
-  //   drop at x=1800 back to main floor
+  // Shape: dead end on LEFT, entry on RIGHT (player encounters entry while going right)
   //
-  // Tunnel dimensions:
-  //   ceiling slab bottom: y=368  (wall top at y=336)
-  //   tunnel floor top:    y=424  (wall top at y=424)
-  //   gap:                 424-368 = 56px → stage 0–1 fit, stage 2 (66px) blocked
-  //   rise from floor:     528-424 = 104px → stages 0–2 can jump (stage 3 jump=102px, just short)
+  //  x=1300   x=1460              x=1810  x=1850
+  //    |  open dead-end |  tunnel (75px) | open entry
+  //    |  [FOOD x=1420] |════════════════|  ↑ jump up
+  //    |════════════════|════════════════|  from floor
+  //    ← left wall seals             (open, no right wall)
   //
-  // Watermelon at x=1600 inside the tunnel — food centre at y=424-24=400.
-  // On the backtrack: player re-enters from x=1800, walks left to x=1600, gets food.
-  wall(1400, 336, 400, T); // tunnel ceiling
-  wall(1400, 424, 400, T); // tunnel floor platform
+  // Tunnel gap: 424 − 349 = 75px → stage 0–2 (28/47/66px) fit; stage 3 (85px) blocked
+  // Rise to enter: 528 − 424 = 104px → stages 0–2 can jump (stage 3: 102px, just short)
+  // Food at x=1420 is in the open dead-end (x=1300–1460, no ceiling) → safe to eat & grow
+  //
+  // Backtrack path:
+  //   pass x=1850 going right → hit exit (locked) → return → jump up at x=1810
+  //   → traverse tunnel left → reach open dead-end → get watermelon → backtrack right
+  //   → drop to floor at x=1850 → go right to exit (200 pts)
+
+  wall(1300, T,   T,   FLOOR_Y - T); // left dead-end wall (ceiling → floor, blocks left entry)
+  wall(1300, 424, 550, T);           // platform floor: x=1300–1850, top at y=424
+  wall(1460, 317, 350, T);           // tunnel ceiling: x=1460–1810, bottom at y=349, gap=75px
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL_WIDTH - T * 3;

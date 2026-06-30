@@ -80,6 +80,34 @@ export class UIScene extends Phaser.Scene {
     this.events.on("hide-timer",         ()                      => this.hideTimer());
     this.events.on("set-score-threshold",(t: number)             => this.setGoal(t));
     this.events.on("exit-unlocked",      ()                      => this.onExitUnlocked());
+    this.events.on("show-ring-hint",     ()                      => this.showRingHighlight());
+  }
+
+  private showRingHighlight() {
+    // Screen-space pulsing highlight around the cooldown ring — matches drawCooldown() position
+    const cx = GAME_WIDTH - 60, cy = 92, r = 32;
+    const glow = this.add.graphics().setDepth(20);
+    const label = this.add.text(cx - r - 16, cy,
+      "Bob's\ndigest\ntimer", {
+        fontSize: "22px", color: "#e67e22", fontFamily: "monospace",
+        stroke: "#000", strokeThickness: 3, align: "right",
+      }).setOrigin(1, 0.5).setAlpha(0).setDepth(20);
+
+    let tick = 0;
+    const interval = this.time.addEvent({ delay: 80, loop: true, callback: () => {
+      tick++;
+      glow.clear();
+      glow.lineStyle(6, 0xe67e22, 0.35 + 0.55 * Math.abs(Math.sin(tick * 0.38)));
+      glow.strokeCircle(cx, cy, r + 8);
+    }});
+
+    this.tweens.add({ targets: label, alpha: 1, duration: 300 });
+    this.time.delayedCall(8000, () => {
+      interval.remove();
+      glow.destroy();
+      this.tweens.add({ targets: label, alpha: 0, duration: 400,
+        onComplete: () => label.destroy() });
+    });
   }
 
   private hideTimer() {
