@@ -5,7 +5,8 @@ export class BootScene extends Phaser.Scene {
   constructor() { super({ key: "BootScene" }); }
 
   preload() {
-    this.load.audio("bgmusic", "music/the-show-must-be-go.mp3");
+    this.load.audio("bgmusic",   "music/the-show-must-be-go.mp3");
+    this.load.audio("menumusic", "music/fluffing-a-duck.mp3");
     // Burps — stage-specific recordings (6 files cover 8 stages)
     this.load.audio("burp_tiny",     "sounds/burp_tiny.mp3");
     this.load.audio("burp_small",    "sounds/burp_small.wav");

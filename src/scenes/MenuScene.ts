@@ -83,9 +83,14 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown-ENTER", () => this.startGame());
 
     this.tweens.add({ targets: btn, alpha: 0.4, duration: 700, ease: "Sine.InOut", yoyo: true, repeat: -1 });
+
+    if (!this.sound.get("menumusic")?.isPlaying) {
+      this.sound.play("menumusic", { loop: true, volume: 0.4 });
+    }
   }
 
   private startGame() {
+    this.sound.stopByKey("menumusic");
     this.scene.start("GameScene", { level: 0 });
   }
 }

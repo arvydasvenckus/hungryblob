@@ -77,14 +77,20 @@ export class ResultScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown-M",     safeMenu);
 
     this.tweens.add({ targets: retry, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
+
+    if (!this.sound.get("menumusic")?.isPlaying) {
+      this.sound.play("menumusic", { loop: true, volume: 0.4 });
+    }
   }
 
   private restart() {
     const { level } = (this as any)._data as { level: number };
+    this.sound.stopByKey("menumusic");
     this.scene.start("GameScene", { level });
   }
 
   private goMenu() {
+    // menumusic keeps playing — MenuScene will detect it's already running
     this.scene.start("MenuScene");
   }
 }
