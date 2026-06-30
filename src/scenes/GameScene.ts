@@ -127,7 +127,8 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
+    this.input.keyboard!.on("keydown-ESC", () => this.openPause());
+    this.events.on("resume-from-pause",    () => this.resumeFromPause());
 
     // Music — tutorial uses menu track, timed levels use the level track
     const track = levelCfg.music === "menu" ? "menumusic" : "bgmusic";
@@ -221,16 +222,19 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private togglePause() {
-    if (this.physics.world.isPaused) {
-      this.physics.resume();
-      this.timerSystem?.resume();
-      this.sound.resumeAll();
-    } else {
-      this.physics.pause();
-      this.timerSystem?.pause();
-      this.sound.pauseAll();
-    }
+  private openPause() {
+    if (this.gameOver || this.levelComplete) return;
+    if (this.scene.isActive("PauseScene")) return; // already open
+    this.physics.pause();
+    this.timerSystem?.pause();
+    this.sound.pauseAll();
+    this.scene.launch("PauseScene");
+  }
+
+  private resumeFromPause() {
+    this.physics.resume();
+    this.timerSystem?.resume();
+    this.sound.resumeAll();
   }
 
   update(_time: number, delta: number) {

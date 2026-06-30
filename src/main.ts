@@ -5,6 +5,7 @@ import { MenuScene   } from "./scenes/MenuScene";
 import { GameScene   } from "./scenes/GameScene";
 import { UIScene     } from "./scenes/UIScene";
 import { ResultScene } from "./scenes/ResultScene";
+import { PauseScene  } from "./scenes/PauseScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, UIScene, ResultScene],
+  scene: [BootScene, MenuScene, GameScene, UIScene, PauseScene, ResultScene],
   parent: "game",
   scale: {
     mode: Phaser.Scale.FIT,
