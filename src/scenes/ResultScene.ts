@@ -118,8 +118,14 @@ export class ResultScene extends Phaser.Scene {
 
   private goNext() {
     const { level } = (this as any)._data as { level: number };
-    this.sound.stopByKey("menumusic");
-    this.scene.start("GameScene", { level: level + 1 });
+    const nextLevel = level + 1;
+    if (level === 0) {
+      // Tutorial → Level 1: show briefing screen first
+      this.scene.start("BriefingScene", { targetLevel: nextLevel });
+    } else {
+      this.sound.stopByKey("menumusic");
+      this.scene.start("GameScene", { level: nextLevel });
+    }
   }
 
   private restart() {
