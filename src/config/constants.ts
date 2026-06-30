@@ -20,9 +20,10 @@ export const MAX_FOOD = 23;
 export const SHRINK_COOLDOWN_MS = 6_667;
 export const SHRINK_TWEEN_MS    = 500;
 
-// Per-stage physics — bigger Bob feels heavier; gentle linear reduction across 8 stages
-export const STAGE_JUMP_VELOCITY = [-520, -490, -460, -425, -395, -363, -330, -300] as const;
-export const STAGE_WALK_SPEED    = [200,  188,  175,  163,  150,  138,  126,  115]  as const;
+// Per-stage physics — wider range makes the size difference feel dramatic.
+// Stage 0: nimble. Stage 7: sluggish. Perfect linear steps between extremes.
+export const STAGE_JUMP_VELOCITY = [-560, -515, -475, -430, -390, -345, -305, -260] as const;
+export const STAGE_WALK_SPEED    = [220,  202,  184,  167,  149,  131,  113,   95]  as const;
 
 export const GRAVITY = 900;
 

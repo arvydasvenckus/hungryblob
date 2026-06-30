@@ -38,11 +38,17 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     const levelCfg = LEVELS[this.levelIndex];
+    // #region agent log
+    fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'GameScene.ts:create-start',message:'GameScene create starting',data:{levelIndex:this.levelIndex,levelName:levelCfg.name},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
     // Select the correct level builder
     const { platforms, exitZone, levelWidth, levelHeight } =
       this.levelIndex === 0 ? buildLevel1(this) : buildLevel2(this);
     this.exitZone = exitZone;
+    // #region agent log
+    fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'GameScene.ts:create-post-build',message:'Level built OK',data:{levelWidth,levelHeight,platformCount:platforms.children.size},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
     this.physics.world.setBounds(0, 0, levelWidth, levelHeight);
     this.physics.world.gravity.y = 0;
@@ -51,7 +57,7 @@ export class GameScene extends Phaser.Scene {
     this.soundSystem = new SoundSystem(this);
 
     const { x, y } = levelCfg.playerStart;
-    this.blob = new Blob(this, x, y, this.sizeSystem);
+    this.blob = new Blob(this, x, y, this.sizeSystem, levelWidth, levelHeight);
 
     // Register level geometry with BlobPhysics
     platforms.children.entries.forEach((go) => {

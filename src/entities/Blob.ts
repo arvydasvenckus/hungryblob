@@ -9,11 +9,14 @@ import {
 } from "../config/constants";
 import { SizeSystem } from "../systems/SizeSystem";
 import { BlobPhysics } from "./BlobPhysics";
-import { LEVEL_WIDTH, LEVEL_HEIGHT } from "../scenes/LevelBuilder";
+import { LEVEL_WIDTH as DEFAULT_LEVEL_WIDTH, LEVEL_HEIGHT as DEFAULT_LEVEL_HEIGHT } from "../scenes/LevelBuilder";
 
 export class Blob {
   /** Plain sprite — no physics body. Positioned from physics each frame. */
   readonly visual: Phaser.GameObjects.Sprite;
+  private _loggedBounds = false;
+  private worldW: number;
+  private worldH: number;
   /** Custom AABB physics engine — the single source of truth for position/size. */
   readonly physics: BlobPhysics;
 
@@ -24,8 +27,17 @@ export class Blob {
   private isStressed = false;
   private isSad      = false;
 
-  constructor(scene: Phaser.Scene, cx: number, cy: number, sizeSystem: SizeSystem) {
+  constructor(
+    scene: Phaser.Scene,
+    cx: number,
+    cy: number,
+    sizeSystem: SizeSystem,
+    worldW = DEFAULT_LEVEL_WIDTH,
+    worldH = DEFAULT_LEVEL_HEIGHT,
+  ) {
     this.scene = scene;
+    this.worldW = worldW;
+    this.worldH = worldH;
 
     const s0 = SIZE_STAGES[0];
     this.physics = new BlobPhysics(cx, cy, s0.width, s0.height);
@@ -49,6 +61,7 @@ export class Blob {
   // resize() is pure arithmetic — no Phaser body, no sync formula needed.
 
   private applyStage(stage: StageIndex) {
+    if (!this.visual?.active) return; // stale timer guard
     this.stage = stage;
     const { width, height } = SIZE_STAGES[stage];
 
@@ -82,7 +95,14 @@ export class Blob {
 
   private triggerBurp(newStage: StageIndex) {
     if (this.isBurping) return;
+    // Guard: abort if the visual sprite was destroyed by scene teardown.
+    // A stale SizeSystem setTimeout can fire after scene shutdown, and calling
+    // tween/play on a destroyed sprite crashes the game.
+    if (!this.visual?.active) return;
     this.isBurping = true;
+    // #region agent log
+    fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'Blob.ts:triggerBurp',message:'triggerBurp called',data:{currentStage:this.stage,newStage,visualActive:this.visual?.active,isSad:this.isSad},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     this.scene.tweens.killTweensOf(this.visual);
 
@@ -217,7 +237,10 @@ export class Blob {
       }
     }
 
-    this.physics.update(delta / 1000, GRAVITY, LEVEL_WIDTH, LEVEL_HEIGHT);
+    this.physics.update(delta / 1000, GRAVITY, this.worldW, this.worldH);
+    // #region agent log — one-shot: log world bounds used by BlobPhysics on first frame
+    if (!this._loggedBounds) { this._loggedBounds = true; fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'Blob.ts:physics-update',message:'BlobPhysics world bounds used',data:{worldW:this.worldW,worldH:this.worldH,bx:this.physics.bx,by:this.physics.by},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{}); }
+    // #endregion
 
     // Visual is always scale 1 → blob drawn size = hitbox size → centres match.
     this.visual.setPosition(this.physics.cx, this.physics.cy);
