@@ -12,8 +12,8 @@ import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
  *   A stage fits through a gap when:   gap > stageHeight  (body.top is below ceiling.bottom)
  *   A stage is blocked by a gap when:  gap ≤ stageHeight  (body.top ≥ ceiling.bottom → collision)
  *
- *   NARROW = 43px → stage 1 (38px) fits, stage 2 (50px) blocked
- *   MEDIUM = 72px → stage 3 (64px) fits, stage 4 (80px) blocked
+ *   NARROW = 56px → stage 1 (47px) fits, stage 2 (66px) blocked
+ *   MEDIUM = 132px → stage 5 (123px) fits, stage 6 (141px) blocked
  *
  * Open sections (food-safe zones):
  *   Section 1:  x = 32  → 490   (before narrow duct)
@@ -24,17 +24,17 @@ import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
  *   [Section 1]  apple (+1)          → Stage 1
  *   [NARROW DUCT x=490–750]
  *   [Section 2]  strawberry (+1)     → Stage 2  (small Bob can jump between duct tops here)
- *   [MEDIUM DUCT x=900–1230]   need to burp once (4→3) to pass
+ *   [MEDIUM DUCT x=900–1230]   stage 6+ blocked; burp to reach stage 5 or below to pass
  *   [Section 3]  orange (+1)         → Stage 3
- *                burger (+2)         → Stage 4 (or 5 → stays at 4 MAX)
- *                carrot (+1)         → Stage 4 (stays max)
+ *                burger (+2)         → Stage 5
+ *                carrot (+1)         → Stage 6
  *   [EXIT x≈1510]
  */
 
 const T = TILE_SIZE; // 32
 
-const NARROW = Math.round((SIZE_STAGES[1].height + SIZE_STAGES[2].height) / 2) - 1; // 43
-const MEDIUM  = Math.round((SIZE_STAGES[3].height + SIZE_STAGES[4].height) / 2);    // 72
+const NARROW = Math.round((SIZE_STAGES[1].height + SIZE_STAGES[2].height) / 2) - 1; // (34+40)/2-1 = 36
+const MEDIUM  = Math.round((SIZE_STAGES[5].height + SIZE_STAGES[6].height) / 2);    // (62+71)/2 = 66
 
 export const LEVEL_WIDTH  = 1600;
 export const LEVEL_HEIGHT = 560;

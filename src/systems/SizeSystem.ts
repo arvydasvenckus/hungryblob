@@ -10,7 +10,7 @@ export interface SizeEvent {
 
 type SizeListener = (event: SizeEvent) => void;
 
-const MAX_STAGE = 4 as StageIndex;
+const MAX_STAGE = 7 as StageIndex;
 
 /**
  * Direct stage-based growth model:

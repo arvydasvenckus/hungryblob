@@ -58,8 +58,8 @@ export const LEVELS: LevelConfig[] = [
       { x: 820,  y: 500, type: "strawberry" }, // +1 → stage 2
       // Section 3 (x=1230-1568): after medium duct
       { x: 1310, y: 500, type: "orange"     }, // +1 → stage 3
-      { x: 1380, y: 500, type: "burger"     }, // +2 → stage 4+ (caps at MAX)
-      { x: 1430, y: 500, type: "carrot"     }, // +1 → stays MAX (score)
+      { x: 1380, y: 500, type: "burger"     }, // +2 → stage 5
+      { x: 1430, y: 500, type: "carrot"     }, // +1 → stage 6
     ],
   },
 ];

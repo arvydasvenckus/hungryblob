@@ -24,7 +24,10 @@ export class BootScene extends Phaser.Scene {
       0xa4de6c, // stage 1 – lime
       0xf4d03f, // stage 2 – yellow
       0xf39c12, // stage 3 – orange
-      0xe74c3c, // stage 4 – red (danger)
+      0xe67e22, // stage 4 – dark orange
+      0xe74c3c, // stage 5 – red
+      0xc0392b, // stage 6 – dark red
+      0x922b21, // stage 7 – deep red (danger)
     ];
 
     const ANIM_FRAMES = [
@@ -45,7 +48,9 @@ export class BootScene extends Phaser.Scene {
       const color = PALETTE[si];
       const w = stage.width;
       const h = stage.height;
-      const r = Math.min(w, h) * (0.28 + si * 0.04);
+      // Radius grows gently with stage; capped at 38% of size so Bob never becomes a circle.
+      // At 38% of width, corners are clearly visible (a full circle would need 50%).
+      const r = Math.min(w, h) * Math.min(0.22 + si * 0.025, 0.38);
       const key = `blob_stage${si}`;
 
       const gfx = this.make.graphics({ x: 0, y: 0 }, false);
