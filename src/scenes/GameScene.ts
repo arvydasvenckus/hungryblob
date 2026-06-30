@@ -192,12 +192,12 @@ export class GameScene extends Phaser.Scene {
     this.timerSystem.pause();
     this.soundSystem.levelComplete();
 
-    const timeBonus = Math.floor(this.timerSystem.getRemaining()) * 10;
-    this.score += timeBonus;
+    // const timeBonus = Math.floor(this.timerSystem.getRemaining()) * 10;
+    // this.score += timeBonus;
 
     const ui = this.scene.get("UIScene");
     ui.events.emit("update-score", this.score);
-    ui.events.emit("show-message", `LEVEL COMPLETE!\n+${timeBonus} time bonus`, "#6fdc8c");
+    ui.events.emit("show-message", `LEVEL COMPLETE!`, "#6fdc8c");
 
     this.time.delayedCall(3000, () => {
       this.scene.stop("UIScene");

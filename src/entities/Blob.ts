@@ -57,14 +57,15 @@ export class Blob {
 
     // Keep body.bottom = prevBottom regardless of execution context.
     //
-    // postUpdate does: sprite.y += (position.y_end - prevFrame.y)
-    // prevFrame.y = prevBottom - prevH  (set by preUpdate from old sprite.y)
+    // postUpdate does:  sprite.y += (position.y_end - prevFrame.y)
+    // We need:          sprite.y_after = prevBottom - height/2
+    // Solve:            sprite.y_before = height/2 + prevFrame.y
     //
-    // We need sprite.y_after_postUpdate = prevBottom - height/2
-    // Solve: sprite.y_before + (prevBottom - height) - (prevBottom - prevH) = prevBottom - height/2
-    //        sprite.y_before = height/2 + prevBottom - prevH
-    pb.position.y = prevBottom - height;           // correct for this physics step
-    this.body.y   = height / 2 + prevBottom - prevH; // correct for postUpdate → next preUpdate
+    // prevFrame.y must be read directly — it is NOT equal to prevBottom - prevH
+    // when Bob is moving (gravity runs before the overlap callback fires).
+    const pfY = (pb as any).prevFrame.y as number;
+    pb.position.y = prevBottom - height; // correct body for this physics step
+    this.body.y   = height / 2 + pfY;   // correct sprite so postUpdate → next preUpdate lands right
 
     if (!this.isEating) this.refreshAnim();
 
@@ -115,14 +116,14 @@ export class Blob {
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
               const pb2        = this.body.body as Phaser.Physics.Arcade.Body;
               const prevBottom = pb2.bottom;
-              const prevH      = pb2.height;
+              const pfY2       = (pb2 as any).prevFrame.y as number;
               const { scale, width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
               this.body.setScale(scale);
               this.body.setSize(width, height);
-              // Same two-line formula as applyStage — keeps body.bottom constant
+              // Same formula as applyStage — use actual prevFrame.y, not approximation
               pb2.position.y = prevBottom - height;
-              this.body.y    = height / 2 + prevBottom - prevH;
+              this.body.y    = height / 2 + pfY2;
 
               // Wide pop then settle
               this.scene.tweens.add({
