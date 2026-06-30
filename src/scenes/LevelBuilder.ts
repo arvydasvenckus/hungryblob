@@ -117,9 +117,10 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   // LEFT BARRIER at x=1460 (ceiling → platform): tunnel is only accessible from the RIGHT.
   // Players can jump onto the platform at x=1300-1460 (left section) but are stopped
   // at x=1460 by the barrier — they must instead jump up at x=1810-1850 to enter the tunnel.
-  wall(1300, 424, 550, T);           // platform floor: x=1300–1850, top at y=424
+  wall(1300, 424, 750, T);           // platform floor: x=1300–2050, top at y=424
   wall(1460, T,   T,   424 - T);    // left tunnel barrier: x=1460, y=32–424 (ceiling to platform)
-  wall(1460, 317, 350, T);           // tunnel ceiling: x=1460–1810, bottom at y=349, gap=75px
+  wall(1460, 317, 550, T);           // tunnel ceiling: x=1460–2010, bottom at y=349, gap=75px
+  // Entry gap: x=2010–2050 (open, no ceiling) — player must walk right to x≈2010 to see it
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL_WIDTH - T * 3;

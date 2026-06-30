@@ -363,7 +363,7 @@ export class GameScene extends Phaser.Scene {
     add("grew2", 870,  FLOOR - 118, "Stand here and wait — Bob digests automatically.");
     // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
     add("junk",  1200, FLOOR - 120, "▼  JUNK FOOD — 2× points but 2× growth!\nEat wisely.", "#ff6b9d");
-    add("tunnel",1830, 424  -  44,  "↑  Jump up here!\n← food hidden inside", "#f1c40f");
+    // tunnel hint removed — let players discover the entry themselves
     add("goback",2200, FLOOR - 100, "Not enough points?\nGo back — jump up at the L-section! ←");
   }
 
@@ -407,13 +407,6 @@ export class GameScene extends Phaser.Scene {
     if (shown.has("junk") && !shown.has("junk-hide") && bx > 1380) {
       shown.add("junk-hide");
       this.hideTutHint("junk");
-    }
-
-    // Zone 4: L-section hint — show near the right-side entry (x=1810-1850)
-    if (!shown.has("tunnel") && bx > 1700 && bx < 1900) this.showTutHint("tunnel");
-    if (shown.has("tunnel") && !shown.has("tunnel-hide") && bx > 1950) {
-      shown.add("tunnel-hide");
-      this.hideTutHint("tunnel");
     }
 
     // Zone 5: go-back hint — show at exit when score is below threshold
