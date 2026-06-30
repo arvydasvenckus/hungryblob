@@ -69,31 +69,75 @@ export class SoundSystem {
     osc.start(t); osc.stop(t + 0.2);
   }
 
-  /** Homer-Simpson-style belch */
+  /** Cute high-pitched Homer-style belch — voiced body + trill + glottal onset */
   burp() {
     const ctx = this.audio;
-    const t = ctx.currentTime;
+    const t   = ctx.currentTime;
+    const dur = 0.72;
+    const P   = 1.5; // pitch multiplier — shifts everything up for a cute character burp
 
-    // LFO for wobble
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.type = "sine";
-    lfo.frequency.value = 14;
-    lfoGain.gain.value = 40;
-    lfo.connect(lfoGain);
-
+    // ── Voiced body: sawtooth sweep (rich harmonics like a real throat) ─────
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.exponentialRampToValueAtTime(55, t + 0.65);
-    lfoGain.connect(osc.frequency);
-    gain.gain.setValueAtTime(0.45, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
-    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(220 * P, t);
+    osc.frequency.exponentialRampToValueAtTime(75 * P, t + dur);
 
-    lfo.start(t); osc.start(t);
-    lfo.stop(t + 0.7); osc.stop(t + 0.7);
+    // ── Formant bandpass: shapes the "mouth cavity" resonance ────────────────
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = "bandpass";
+    bpf.frequency.setValueAtTime(360 * P, t);
+    bpf.frequency.exponentialRampToValueAtTime(160 * P, t + dur);
+    bpf.Q.value = 2.2;
+
+    // ── Amplitude envelope ───────────────────────────────────────────────────
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.001, t);
+    env.gain.linearRampToValueAtTime(0.58, t + 0.022); // hard fast attack
+    env.gain.setValueAtTime(0.58, t + dur * 0.52);
+    env.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    // ── Tremolo LFO: amplitude flutter — this IS the "trill" of a real burp ─
+    // Starts fast, slows toward end (natural pressure release)
+    const tremOsc = ctx.createOscillator();
+    tremOsc.type  = "sine";
+    tremOsc.frequency.setValueAtTime(17, t);
+    tremOsc.frequency.linearRampToValueAtTime(9, t + dur);
+    const tremAmt = ctx.createGain();
+    tremAmt.gain.value = 0.3;           // ±0.3 on a base-1 gain → 0.7–1.3 × signal
+    const tremMix = ctx.createGain();
+    tremMix.gain.value = 1;
+    tremOsc.connect(tremAmt);
+    tremAmt.connect(tremMix.gain);      // AudioParam add — base stays 1, LFO adds ripple
+
+    // ── Glottal noise burst: the "B-" onset grunt ────────────────────────────
+    const nLen = Math.floor(ctx.sampleRate * 0.055);
+    const nBuf = ctx.createBuffer(1, nLen, ctx.sampleRate);
+    const nd   = nBuf.getChannelData(0);
+    for (let i = 0; i < nLen; i++) nd[i] = Math.random() * 2 - 1;
+    const nSrc  = ctx.createBufferSource();
+    nSrc.buffer = nBuf;
+    const nFilt = ctx.createBiquadFilter();
+    nFilt.type  = "bandpass";
+    nFilt.frequency.value = 290 * P;
+    nFilt.Q.value         = 1.6;
+    const nEnv = ctx.createGain();
+    nEnv.gain.setValueAtTime(0.42, t);
+    nEnv.gain.exponentialRampToValueAtTime(0.001, t + 0.065);
+
+    // ── Signal chain ─────────────────────────────────────────────────────────
+    osc.connect(bpf);
+    bpf.connect(env);
+    env.connect(tremMix);
+    tremMix.connect(ctx.destination);
+
+    nSrc.connect(nFilt);
+    nFilt.connect(nEnv);
+    nEnv.connect(ctx.destination);
+
+    // ── Start / stop ─────────────────────────────────────────────────────────
+    osc.start(t);     osc.stop(t + dur);
+    tremOsc.start(t); tremOsc.stop(t + dur);
+    nSrc.start(t);    nSrc.stop(t + 0.065);
   }
 
   /** Tense double-thump played once when stress kicks in */

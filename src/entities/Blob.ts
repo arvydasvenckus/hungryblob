@@ -86,20 +86,20 @@ export class Blob {
 
     this.scene.tweens.killTweensOf(this.visual);
 
-    // Phase 1: shock squash — wide flat, both axes
+    // Phase 1: mild squash anticipation
     this.scene.tweens.add({
       targets: this.visual,
-      scaleX: 1.55,
-      scaleY: 0.52,
-      duration: 110,
+      scaleX: 1.28,
+      scaleY: 0.72,
+      duration: 75,
       ease: "Sine.In",
       onComplete: () => {
-        // Phase 2: puff up tall — compressed sides, air rising
+        // Phase 2: puff up — air rising
         this.scene.tweens.add({
           targets: this.visual,
-          scaleX: 0.6,
-          scaleY: 1.7,
-          duration: 130,
+          scaleX: 0.80,
+          scaleY: 1.35,
+          duration: 90,
           ease: "Sine.Out",
           onComplete: () => {
             // Phase 3: reset scale cleanly, then play burp frames

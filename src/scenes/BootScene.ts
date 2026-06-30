@@ -111,16 +111,16 @@ export class BootScene extends Phaser.Scene {
       else if (f === 2) { sx = 1.15; sy = 0.85; mouthMode = "huge"; }
       else { sx = 1.04; sy = 0.96; mouthMode = "normal"; }
     } else if (anim === "burp") {
-      // F0: shock squash — wide flat anticipation, eyes wide
-      // F1: puff up tall — compressed cheeks, first burst
-      // F2: wide burst — widest mouth, strongest gas wave
-      // F3: ripple — secondary wave, different phase
-      // F4: settle — last puff fading
-      if      (f === 0) { sx = 1.6;  sy = 0.48; eyeOffY = -2; }
-      else if (f === 1) { sx = 0.58; sy = 1.72; mouthMode = "burp_open"; burpRipple = 0; eyeOffY = 3; }
-      else if (f === 2) { sx = 1.22; sy = 1.28; mouthMode = "burp_open"; burpRipple = 1; eyeOffY = 1; }
-      else if (f === 3) { sx = 0.82; sy = 1.18; mouthMode = "burp_open"; burpRipple = 2; }
-      else              { sx = 1.06; sy = 1.06; mouthMode = "burp_open"; burpRipple = 0; }
+      // F0: mild squash anticipation
+      // F1: puff up — first burst
+      // F2: wide burst — biggest mouth
+      // F3: ripple continuation
+      // F4: settle
+      if      (f === 0) { sx = 1.28; sy = 0.72; eyeOffY = -2; }
+      else if (f === 1) { sx = 0.80; sy = 1.35; mouthMode = "burp_open"; burpRipple = 0; eyeOffY = 2; }
+      else if (f === 2) { sx = 1.14; sy = 1.20; mouthMode = "burp_open"; burpRipple = 1; eyeOffY = 1; }
+      else if (f === 3) { sx = 0.90; sy = 1.12; mouthMode = "burp_open"; burpRipple = 2; }
+      else              { sx = 1.03; sy = 1.03; mouthMode = "burp_open"; burpRipple = 0; }
     } else if (anim === "stress") {
       const shake = Math.sin(f * 2.8) * 0.04;
       sx = 1 + shake; sy = 1 - shake;
@@ -503,7 +503,7 @@ export class BootScene extends Phaser.Scene {
       { name: "jump",   count: 3, frameRate: 8,  repeat: 0  },
       { name: "fall",   count: 2, frameRate: 6,  repeat: -1 },
       { name: "eat",    count: 4, frameRate: 12, repeat: 0  },
-      { name: "burp",   count: 5, frameRate: 9,  repeat: 0  },
+      { name: "burp",   count: 5, frameRate: 13, repeat: 0  },
       { name: "stress", count: 4, frameRate: 7,  repeat: -1 },
       { name: "sad",    count: 4, frameRate: 5,  repeat: -1 },
     ];
