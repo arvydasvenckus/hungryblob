@@ -152,108 +152,133 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
  *   Section 1: x=32-400
  *   Section 2: x=680-950
  *   Section 3: x=1200-1500
- *   Section 4: x=1780-2168
+ * Layout (see plan for details):
+ *   x=32-300   Open start
+ *   x=300-640  GAP_B floor duct (stages 0–2)
+ *   x=640-1050 Dual path: GAP_A floor duct (stages 0–1) + elevated platform bypass (stages 0–2)
+ *   x=1050-350 Open relief
+ *   x=1350-382 Vertical wall with 75px horizontal gap (stages 0–2 can pass)
+ *   x=1650-900 Staircase: step A y=452, step B y=408
+ *   x=2100-400 GAP_C floor duct (stages 0–3)
+ *   x=2400-950 Final sprint + exit
  *
- * The SECOND GAP_A (x=1500-1780) is the crunch: players who ate greedily in
- * sections 2-3 must burn clock time burping back to stage ≤1.
+ * Food rule: NEVER inside a duct (all food in open zones or on open platforms).
  */
-export const LEVEL2_WIDTH  = 2200;
+export const LEVEL2_WIDTH  = 3000;
 export const LEVEL2_HEIGHT = 560;
 
 export function buildLevel2(scene: Phaser.Scene): LevelObjects {
-  const T2       = TILE_SIZE;
-  const FLOOR2   = LEVEL2_HEIGHT - T2; // 528
-  const GAP_A    = 56; // allows stage 1 (47px), blocks stage 2 (66px)
-  const GAP_B    = 75; // allows stage 2 (66px), blocks stage 3 (85px)
+  const T2     = TILE_SIZE;
+  const FLOOR2 = LEVEL2_HEIGHT - T2; // 528
+  const GAP_A  = 56;  // allows stage 1 (47px),  blocks stage 2 (66px)
+  const GAP_B  = 75;  // allows stage 2 (66px),  blocks stage 3 (85px)
+  const GAP_C  = 94;  // allows stage 3 (85px),  blocks stage 4 (104px)
 
   const platforms = scene.physics.add.staticGroup();
 
   // Background — warm kitchen palette
   const bg = scene.add.graphics();
-  bg.fillStyle(0x2c1810, 1); // dark warm brown (kitchen wall)
+  bg.fillStyle(0x2c1810, 1);
   bg.fillRect(0, 0, LEVEL2_WIDTH, LEVEL2_HEIGHT);
   drawKitchenBg(bg, LEVEL2_WIDTH, LEVEL2_HEIGHT);
 
-  // ── Wall helper (warm steel / cast-iron look) ──────────────────────────────
+  // ── Wall helper (warm cast-iron look) ──────────────────────────────────────
   function wall2(x: number, y: number, w: number, h: number, isRaised = false) {
     const g = scene.add.graphics();
-    const baseColor = isRaised ? 0x8B7355 : 0x4a3728; // wood-ish platform vs dark wall
+    const baseColor = isRaised ? 0x8B7355 : 0x4a3728;
     g.fillStyle(baseColor, 1);
     g.fillRect(0, 0, w, h);
     g.fillStyle(0x6b5042, 0.7); g.fillRect(0, 0, w, 3);
     g.fillStyle(0x8b6b50, 0.4); g.fillRect(0, 0, 2, h);
     if (w > 64) {
       g.fillStyle(0x6b5042, 0.5);
-      for (let rx = 16; rx < w - 16; rx += 56) {
-        g.fillCircle(rx, h / 2, 4);
-      }
+      for (let rx = 16; rx < w - 16; rx += 56) g.fillCircle(rx, h / 2, 4);
     }
     const key = `l2_wall_${x}_${y}_${w}_${h}`;
     g.generateTexture(key, w, h);
     g.destroy();
     const img = scene.physics.add.staticImage(x + w / 2, y + h / 2, key);
-    img.setDisplaySize(w, h);
-    img.refreshBody();
+    img.setDisplaySize(w, h); img.refreshBody();
     platforms.add(img);
   }
 
+  // Floor-level horizontal duct ceiling
   function ductCeiling2(x: number, gap: number, width: number, thickness = T2) {
-    const ceilBottom = FLOOR2 - gap;
-    wall2(x, ceilBottom - thickness, width, thickness);
+    wall2(x, FLOOR2 - gap - thickness, width, thickness);
+  }
+
+  // Vertical wall with a horizontal passage (gap from gapTop to gapBottom)
+  function vertWall(x: number, gapTop: number, gapBottom: number) {
+    if (gapTop > 0) wall2(x, 0, T2, gapTop);              // upper section
+    if (gapBottom < FLOOR2) wall2(x, gapBottom, T2, FLOOR2 - gapBottom); // lower section
   }
 
   // ── Boundaries ─────────────────────────────────────────────────────────────
-  wall2(0,                0,          T2,            LEVEL2_HEIGHT);
-  wall2(LEVEL2_WIDTH - T2, 0,         T2,            LEVEL2_HEIGHT);
-  wall2(0,                0,          LEVEL2_WIDTH,  T2);
-  wall2(0,                FLOOR2,     LEVEL2_WIDTH,  T2);
+  wall2(0,                0,       T2,            LEVEL2_HEIGHT);
+  wall2(LEVEL2_WIDTH - T2, 0,      T2,            LEVEL2_HEIGHT);
+  wall2(0,                0,       LEVEL2_WIDTH,  T2);
+  wall2(0,                FLOOR2,  LEVEL2_WIDTH,  T2);
 
-  // ── First GAP_A duct (x=400-680) ──────────────────────────────────────────
-  ductCeiling2(400, GAP_A, 280);
+  // ── Zone 1: GAP_B floor duct (x=300–640, stages 0–2) ─────────────────────
+  ductCeiling2(300, GAP_B, 340);
 
-  // ── GAP_B duct (x=950-1200) ───────────────────────────────────────────────
-  ductCeiling2(950, GAP_B, 250);
+  // ── Zone 2: Dual path (x=640–1050) ────────────────────────────────────────
+  //    Floor path:    GAP_A duct — only stages 0–1 can walk through
+  //    Elevated path: open platform at y=416 — stages 0–2 can jump to it
+  //                   (rise=112px; stage 3 jump=102px, just short)
+  //    Stage 2 MUST take the elevated path. Stage 3+ blocked by both → burp first.
+  ductCeiling2(640, GAP_A, 410);          // floor-level narrow duct ceiling
+  wall2(640, 416, 410, T2, true);         // elevated platform (top at y=416)
 
-  // ── Second GAP_A duct (x=1500-1780) ─ the crunch ─────────────────────────
-  ductCeiling2(1500, GAP_A, 280);
+  // ── Zone 3: Open relief (x=1050–1280) ────────────────────────────────────
+  // (food + breathing room)
 
-  // ── Raised platform in section 3 (x=1310, top y=448) ─────────────────────
-  // Reachable by stage ≤4, NOT by stage 5+ (jump height drops below 80px)
-  wall2(1310, 448, 96, 16, true);
+  // ── Zone 4: Vertical wall with horizontal gap (x=1350, y=377–452) ─────────
+  //    Stepping platform at y=452 on the left (rise=76px, stages 0–4 can reach)
+  //    Gap = 75px (GAP_B): stages 0–2 can pass through while on the platform
+  //    Stage 3 (85px): body top = 452−85=367 < 377 → hits upper wall → blocked
+  //    Stage 4+ can't even reach the platform (jump < 76px)
+  wall2(1280, 452, 70, T2, true);         // left stepping platform
+  vertWall(1350, 377, 452);              // vertical wall with 75px gap
+  // The right side lower wall top (y=452) acts as exit ledge; Bob drops to floor
+
+  // ── Zone 5: Staircase (x=1650–1890) ──────────────────────────────────────
+  //    Step A: y=452, rise=76px (stages 0–4)
+  //    Step B: y=408, rise=120px from floor (stage 2 jump=125px — just reaches)
+  wall2(1650, 452, 120, T2, true);        // step A
+  wall2(1770, 408, 120, T2, true);        // step B
+
+  // ── Zone 6: GAP_C floor duct (x=2100–2400, stages 0–3) ───────────────────
+  ductCeiling2(2100, GAP_C, 300);
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL2_WIDTH - T2 * 3;
   const exitY = FLOOR2 - T2 * 2;
 
-  // Re-use cached texture if it exists, otherwise generate
   if (!scene.textures.exists("exit_door")) {
     const exitGfx = scene.add.graphics();
-    exitGfx.fillStyle(0x2ecc71, 0.2);
-    exitGfx.fillRect(0, 0, T2 * 1.5, T2 * 2);
-    exitGfx.lineStyle(3, 0x2ecc71, 1);
-    exitGfx.strokeRect(0, 0, T2 * 1.5, T2 * 2);
-    exitGfx.fillStyle(0x2ecc71, 1);
-    exitGfx.fillTriangle(8, T2 * 0.6, 18, T2, 8, T2 * 1.4);
-    exitGfx.generateTexture("exit_door", T2 * 1.5, T2 * 2);
-    exitGfx.destroy();
+    exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T2 * 1.5, T2 * 2);
+    exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T2 * 1.5, T2 * 2);
+    exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T2 * 0.6, 18, T2, 8, T2 * 1.4);
+    exitGfx.generateTexture("exit_door", T2 * 1.5, T2 * 2); exitGfx.destroy();
   }
   scene.add.image(exitX + T2 * 0.75, exitY + T2, "exit_door");
   const exitZone = scene.add.zone(exitX + T2 * 0.75, exitY + T2, T2 * 1.5, T2 * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Level label ───────────────────────────────────────────────────────────
-  const hs2: Phaser.Types.GameObjects.Text.TextStyle = {
+  // ── Hints ─────────────────────────────────────────────────────────────────
+  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: "13px", color: "#c9956a", fontFamily: "monospace",
     stroke: "#000", strokeThickness: 2, align: "center",
   };
+  scene.add.text(310, FLOOR2 - 68, "Tighten up →", { ...hs }).setOrigin(0, 0.5);
+  scene.add.text(648, FLOOR2 - 68, "Jump up or squeeze!", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
+  scene.add.text(1290, FLOOR2 - 60, "Jump & fit the gap →", { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
+  scene.add.text(1660, FLOOR2 - 68, "Staircase ↑", { ...hs }).setOrigin(0, 0.5);
+  scene.add.text(2108, FLOOR2 - 68, "Big squeeze →", { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T2 * 0.75, exitY - 22, "EXIT ▼",
     { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
-
-  // Duct entrance hints
-  scene.add.text(410, FLOOR2 - 68, "Tight! →", { ...hs2, color: "#e67e22" }).setOrigin(0, 0.5);
-  scene.add.text(960, FLOOR2 - 68, "Wider →", { ...hs2 }).setOrigin(0, 0.5);
-  scene.add.text(1510, FLOOR2 - 68, "Tight again! →", { ...hs2, color: "#e74c3c" }).setOrigin(0, 0.5);
 
   return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL2_WIDTH, levelHeight: LEVEL2_HEIGHT };
 }
