@@ -76,8 +76,10 @@ export const LEVELS: LevelConfig[] = [
       { x: 800,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts
       // After the stack — junk food lesson
       { x: 1200, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts
-      // Inside open dead-end chamber of L-section (x=1300-1460, no ceiling → safe to eat)
-      { x: 1420, y: 400, type: "watermelon" }, // +1;  50 pts  (y=424-24=400 above platform)
+      // Inside the tunnel (x=1620, between ceiling bottom y=349 and platform y=424, gap=75px)
+      // Bob eats while traversing the tunnel leftward during backtrack.
+      // Stage 0→1 (47px<75px) can still exit after eating ✓; stage 1→2 (66px<75px) also ✓
+      { x: 1620, y: 400, type: "watermelon" }, // +1;  50 pts  (rests on tunnel platform floor)
     ],
   },
 

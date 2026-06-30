@@ -82,17 +82,17 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   // ── TWO-BAR STACK (x=900–1060): too tall to jump over, gap too narrow for stage 1
   //
   //  ceiling (y=32)
-  //  ═══════════  upper beam  y=32–262  (touches ceiling, blocks jumping over)
-  //               open air gap y=262–390
-  //  ═══════════  lower beam  y=390–491
-  //               floor gap   y=491–528 = 37px  (stage 0 only)
+  //  ═══════════  upper beam  y=32–280   (touches ceiling → can't jump above it)
+  //  ═══════════  lower beam  y=280–495  (immediately adjacent → no air gap to exploit)
+  //               floor gap   y=495–528 = 33px  (stage 0 = 28px fits; stage 1 = 47px blocked)
   //  floor (y=528)
   //
-  // Stage 0 (28px): body_top=500 ≥ 491 → fits through floor gap ✓
-  // Stage 1 (47px): body_top=481 < 491 → collides with lower beam ✗ BLOCKED
-  // Can't jump over: upper beam starts at global ceiling, unreachable.
-  wall(900,  T,    160, 230); // upper beam — ceiling to y=262
-  wall(900,  390,  160, 101); // lower beam — y=390 to y=491
+  // IMPORTANT: beams are adjacent (no air gap) so Bob cannot land between them.
+  // Lower beam top at y=280: stage 0 peak body_bottom=354 > 280 → can't jump to top.
+  // Stage 1 peak body_bottom=381 > 280 → also can't reach the lower beam top.
+  // Only passage is the 33px floor gap — stage 0 (28px body) fits; stage 1 (47px) blocked.
+  wall(900,  T,    160, 248); // upper beam — y=32 to y=280 (touches ceiling)
+  wall(900,  280,  160, 215); // lower beam — y=280 to y=495 (adjacent, no air gap)
 
   // ── L-SECTION (L rotated 90° CW): sealed left wall, right-side entry ─────
   //
@@ -113,7 +113,8 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   //   → traverse tunnel left → reach open dead-end → get watermelon → backtrack right
   //   → drop to floor at x=1850 → go right to exit (200 pts)
 
-  wall(1300, T,   T,   FLOOR_Y - T); // left dead-end wall (ceiling → floor, blocks left entry)
+  // Left wall removed — main floor path is unobstructed under the elevated platform.
+  // Dead end is the left edge of the platform (Bob falls off at x=1300).
   wall(1300, 424, 550, T);           // platform floor: x=1300–1850, top at y=424
   wall(1460, 317, 350, T);           // tunnel ceiling: x=1460–1810, bottom at y=349, gap=75px
 
