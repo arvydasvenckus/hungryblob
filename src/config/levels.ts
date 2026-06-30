@@ -69,15 +69,15 @@ export const LEVELS: LevelConfig[] = [
     //   x=1060-1400  Between stack and L-tunnel: open floor
     //   L-tunnel interior x=1400-1800 at y=368-424: tunnel floor platform (open above when inside)
     //   x=1800-2400  After tunnel: open floor to exit
+    // Open zones: x=32-900 (left of stack), x=1060-1400 (between stack and tunnel),
+    //             x=1400-1800 tunnel interior (open above on platform), x=1800-2400 (after tunnel)
     foods: [
-      // LEFT of stack — elevated bonus (on platform top y=452, centre y=428)
-      { x: 640,  y: 428, type: "grapes"     }, // +1 → stage 1; 50 pts. Easy to miss = backtrack target
-      // LEFT of stack — first required food
-      { x: 800,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts. Must eat BEFORE reaching the stack
-      // RIGHT of stack — junk food lesson
-      { x: 1200, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts. Big score but big growth!
-      // INSIDE L-tunnel — bonus watermelon requiring tunnel navigation
-      { x: 1600, y: 400, type: "watermelon" }, // +1; 50 pts. Only stages 0-1 can fit through tunnel (56px gap)
+      // First food — must eat before reaching the stack
+      { x: 800,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts
+      // After the stack — junk food lesson
+      { x: 1200, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts
+      // Inside L-tunnel — bonus requiring tunnel navigation (stages 0-1 only fit 56px gap)
+      { x: 1600, y: 400, type: "watermelon" }, // +1;  50 pts
     ],
   },
 

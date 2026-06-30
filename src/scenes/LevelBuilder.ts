@@ -79,10 +79,6 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   wall(0,               0,       LEVEL_WIDTH, T);            // ceiling
   wall(0,               FLOOR_Y, LEVEL_WIDTH, T);            // floor
 
-  // ── Elevated platform for bonus grapes (x=580–700, top y=452) ──────────────
-  // Rise from floor = 76px; stages 0-4 can jump to it. Open above — safe zone.
-  wall(580, 452, 120, T);
-
   // ── TWO-BAR STACK (x=900–1060): too tall to jump over, gap too narrow for stage 1
   //
   //  ceiling (y=32)
@@ -131,54 +127,7 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const exitZone = scene.add.zone(exitX + T * 0.75, exitY + T, T * 1.5, T * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Tutorial hints (progressive, world-space, well-spaced) ──────────────
-  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: "13px", color: "#a0aec0", fontFamily: "monospace",
-    stroke: "#000", strokeThickness: 2, align: "center",
-  };
-
-  // Zone 1: movement (centre of open arena)
-  scene.add.text(350, FLOOR_Y - 150, "← → Move   ↑ / SPACE Jump", hs).setOrigin(0.5);
-  scene.add.text(350, FLOOR_Y - 110, "Try jumping over things!", { ...hs }).setOrigin(0.5);
-
-  // Zone 2: elevated platform
-  scene.add.text(640, 424 - 32, "↑ Bonus food! Jump up.", {
-    fontSize: "12px", color: "#27ae60", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
-  }).setOrigin(0.5);
-
-  // Zone 3: first food
-  scene.add.text(800, FLOOR_Y - 100, "▼ Eat this to grow!", {
-    fontSize: "13px", color: "#6fdc8c", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
-  }).setOrigin(0.5);
-
-  // Zone 4: two-bar stack hints (clear of each other vertically)
-  scene.add.text(815, FLOOR_Y - 72, "You grew! Too big to squeeze through.", {
-    ...hs, color: "#f39c12",
-  }).setOrigin(0.5);
-  scene.add.text(815, FLOOR_Y - 110, "Stand still and wait here...", {
-    ...hs, color: "#f39c12",
-  }).setOrigin(0.5);
-  scene.add.text(815, FLOOR_Y - 148, "↗ Watch that ring — when full, Bob burps and shrinks!", {
-    ...hs, color: "#e67e22",
-  }).setOrigin(0.5);
-
-  // Zone 5: after the stack — junk food lesson (staggered L/R so they don't overlap)
-  scene.add.text(1200, FLOOR_Y - 110, "▼ JUNK FOOD", {
-    fontSize: "13px", color: "#ff6b9d", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
-  }).setOrigin(0.5);
-  scene.add.text(1200, FLOOR_Y - 80, "2× points, but you\ngrow TWICE as fast!", {
-    ...hs, color: "#ff6b9d",
-  }).setOrigin(0.5);
-
-  // Zone 6: L-tunnel hint (above tunnel entrance)
-  scene.add.text(1600, 336 - 28, "Jump up for bonus food ↓\n(only small Bob fits!)", {
-    ...hs, color: "#f1c40f",
-  }).setOrigin(0.5);
-
-  // Zone 7: near exit
-  scene.add.text(exitX + T * 0.75, exitY - 64, "Not enough pts? Go back!\nTry the tunnel at x=1400 ←", {
-    ...hs, color: "#a0aec0",
-  }).setOrigin(0.5);
+  // ── Exit label only — all other hints are managed by GameScene (progressive disclosure)
   scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", {
     fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
   }).setOrigin(0.5);
