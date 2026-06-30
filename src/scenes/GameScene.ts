@@ -114,10 +114,16 @@ export class GameScene extends Phaser.Scene {
 
     this.timerSystem.start();
 
-    const ui = this.scene.get("UIScene");
-    ui.events.emit("update-timer", levelCfg.timeLimit);
-    ui.events.emit("update-score", 0);
-    ui.events.emit("update-stage", 0);
+    // UIScene was just launched — its create() runs next frame.
+    // Defer the initial UI sync so UIScene's objects exist when we emit.
+    this.time.delayedCall(0, () => {
+      const ui = this.scene.get("UIScene");
+      if (ui) {
+        ui.events.emit("update-timer", levelCfg.timeLimit);
+        ui.events.emit("update-score", 0);
+        ui.events.emit("update-stage", 0);
+      }
+    });
 
     this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
   }
