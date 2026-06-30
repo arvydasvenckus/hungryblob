@@ -210,7 +210,18 @@ export class Blob {
     }
 
     this.physics.update(delta / 1000, GRAVITY, LEVEL_WIDTH, LEVEL_HEIGHT);
-    this.visual.setPosition(this.physics.cx, this.physics.cy);
+
+    // Align the visual so the blob's drawn bottom matches the physics body bottom.
+    //
+    // The blob sprite is drawn centred in an 80px cell and displayed at scale S.
+    //   blob visual bottom = sprite.y + bh × S / 2
+    // We want that to equal physics.bottom = physics.cy + bh/2.
+    // Solving: sprite.y = physics.cy + bh × (1 − S) / 2
+    // At S=1.0 the offset is zero; at S>1 the sprite shifts up so the visual
+    // bottom stays flush with the floor rather than sinking through it.
+    const { scale } = SIZE_STAGES[this.stage];
+    const visualY = this.physics.cy + this.physics.bh * (1 - scale) / 2;
+    this.visual.setPosition(this.physics.cx, visualY);
 
     // Animation state machine
     if (this.isEating || this.isBurping) return;
