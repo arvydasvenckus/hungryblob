@@ -44,8 +44,9 @@ export class Blob {
 
     // Plain sprite — no physics body. Camera + tweens target this.
     // Scale is always 1: the texture's blob drawing already matches hitbox dimensions.
+    // Depth 2: renders above tutorial hint texts (depth 1) but below UI overlays.
     this.visual = scene.add.sprite(cx, cy, "blob_stage0", 0);
-    this.visual.setScale(1);
+    this.visual.setScale(1).setDepth(2);
     this.visual.play("blob_idle_0");
 
     sizeSystem.onSizeChange((evt) => {

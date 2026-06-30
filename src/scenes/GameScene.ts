@@ -353,7 +353,7 @@ export class GameScene extends Phaser.Scene {
       const t = this.add.text(x, y, text, {
         fontSize: "14px", color, fontFamily: "monospace",
         stroke: "#000", strokeThickness: 3, align: "center",
-      }).setOrigin(0.5).setAlpha(0).setDepth(-1);
+      }).setOrigin(0.5).setAlpha(0).setDepth(1);
       this.tutHints.set(key, t);
     };
 
