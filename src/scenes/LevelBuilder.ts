@@ -2,49 +2,30 @@ import Phaser from "phaser";
 import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
 
 /**
- * Tutorial Level 1 — "Air Ducts"
+ * Tutorial — progressive mechanic introduction
  *
- * HARD RULE: Food is NEVER placed inside a duct.
- * It is only placed in open sections where Bob can always grow upward freely.
+ * Learning sequence (left → right):
+ *   1. Open arena          (x=32–380)   move + jump, no food
+ *   2. Elevated platform   (x=360–460)  bonus grapes — easy to miss, creates backtrack need
+ *   3. Apple on ground     (x=490)      first food → stage 1 (47px)
+ *   4. THE WALL            (x=530)      full-height, 37px floor gap → stage 0 only
+ *                                       stage 1 (47px) cannot pass → must wait for burp
+ *   5. Junk food section   (x=600–850)  burger + watermelon, score lesson
+ *   6. Locked exit         (x=1050)     200 pts needed → player may backtrack for grapes
  *
- * Gap physics:
- *   body.bottom = sprite.y + height/2.  body.top = body.bottom - height.
- *   A stage fits through a gap when:   gap > stageHeight  (body.top is below ceiling.bottom)
- *   A stage is blocked by a gap when:  gap ≤ stageHeight  (body.top ≥ ceiling.bottom → collision)
+ * Backtrack mechanic:
+ *   apple(50) + burger(100) = 150 → exit locked → go back through wall for grapes(50) or watermelon(50)
+ *   Going back through the 37px gap requires being stage 0 again (must wait for burps).
+ *   Teaches: junk food makes re-navigation harder.
  *
- *   NARROW = 56px → stage 1 (47px) fits, stage 2 (66px) blocked
- *   MEDIUM = 132px → stage 5 (123px) fits, stage 6 (141px) blocked
- *
- * Open sections (food-safe zones):
- *   Section 1:  x = 32  → 490   (before narrow duct)
- *   Section 2:  x = 750 → 900   (between ducts — 150px gap, jumpable when small)
- *   Section 3:  x = 1230 → 1568 (after medium duct)  ← exit also here
- *
- * Guided food sequence:
- *   [Section 1]  apple (+1)          → Stage 1
- *   [NARROW DUCT x=490–750]
- *   [Section 2]  strawberry (+1)     → Stage 2  (small Bob can jump between duct tops here)
- *   [MEDIUM DUCT x=900–1230]   stage 6+ blocked; burp to reach stage 5 or below to pass
- *   [Section 3]  orange (+1)         → Stage 3
- *                burger (+2)         → Stage 5
- *                carrot (+1)         → Stage 6
- *   [EXIT x≈1510]
+ * FOOD RULE: all food is in open zones — never under any ceiling.
  */
 
 const T = TILE_SIZE; // 32
 
-const NARROW = Math.round((SIZE_STAGES[1].height + SIZE_STAGES[2].height) / 2) - 1; // (34+40)/2-1 = 36
-const MEDIUM  = Math.round((SIZE_STAGES[5].height + SIZE_STAGES[6].height) / 2);    // (62+71)/2 = 66
-
 export const LEVEL_WIDTH  = 1600;
 export const LEVEL_HEIGHT = 560;
 const FLOOR_Y = LEVEL_HEIGHT - T; // 528
-
-// Duct x-ranges (used to enforce the "no food inside ducts" rule visually)
-const NARROW_X_START = 490;
-const NARROW_X_END   = 750;
-const MEDIUM_X_START = 900;
-const MEDIUM_X_END   = 1230;
 
 export interface LevelObjects {
   platforms:  Phaser.Physics.Arcade.StaticGroup;
@@ -85,36 +66,39 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
     platforms.add(img);
   }
 
-  // ── Duct ceiling helper ────────────────────────────────────────────────────
-  // Only creates the LOW CEILING — the main floor IS the duct floor.
-  function ductCeiling(x: number, gapFromFloor: number, width: number, thickness = T) {
-    const ceilBottom = FLOOR_Y - gapFromFloor;
-    wall(x, ceilBottom - thickness, width, thickness);
+  // ── Vertical wall with horizontal floor gap ────────────────────────────────
+  // gapTop = y where the gap starts (from ceiling), gapBottom = y where gap ends (toward floor)
+  function vertWall(x: number, gapTop: number, gapBottom: number) {
+    if (gapTop > T)           wall(x, T, T, gapTop - T);          // upper section (below global ceiling)
+    if (gapBottom < FLOOR_Y)  wall(x, gapBottom, T, FLOOR_Y - gapBottom); // lower section (above floor)
   }
 
-  // ── Boundary ───────────────────────────────────────────────────────────────
+  // ── Boundaries ─────────────────────────────────────────────────────────────
   wall(0,               0,       T,           LEVEL_HEIGHT); // left
   wall(LEVEL_WIDTH - T, 0,       T,           LEVEL_HEIGHT); // right
   wall(0,               0,       LEVEL_WIDTH, T);            // ceiling
   wall(0,               FLOOR_Y, LEVEL_WIDTH, T);            // floor
 
-  // ── Narrow duct ceiling (x 490 → 750) ─────────────────────────────────────
-  ductCeiling(NARROW_X_START, NARROW, NARROW_X_END - NARROW_X_START);
+  // ── Elevated platform for bonus grapes (x=360–460, top y=452) ──────────────
+  // Rise from floor = 528-452=76px; stages 0-4 can jump to it.
+  // Food placed on top is in an open zone — no ceiling above.
+  wall(360, 452, 100, T);
 
-  // ── Medium duct ceiling (x 1000 → 1230) ───────────────────────────────────
-  ductCeiling(MEDIUM_X_START, MEDIUM, MEDIUM_X_END - MEDIUM_X_START);
+  // ── THE WALL (x=530): full-height, 37px gap at floor level ─────────────────
+  // Gap: y=491–528 (37px).
+  // Stage 0 (28px body): body_top=500 ≥ 491 → fits ✓
+  // Stage 1 (47px body): body_top=481 < 491 → hits upper wall ✗ (BLOCKED)
+  // Player must wait for burp (6.7s) to shrink back to stage 0.
+  vertWall(530, 491, 528);
 
-  // ── EXIT (section 3, safely after medium duct) ────────────────────────────
+  // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL_WIDTH - T * 3;
-  const exitY = FLOOR_Y - T * 2;
+  const exitY  = FLOOR_Y - T * 2;
 
   const exitGfx = scene.add.graphics();
-  exitGfx.fillStyle(0x2ecc71, 0.2);
-  exitGfx.fillRect(0, 0, T * 1.5, T * 2);
-  exitGfx.lineStyle(3, 0x2ecc71, 1);
-  exitGfx.strokeRect(0, 0, T * 1.5, T * 2);
-  exitGfx.fillStyle(0x2ecc71, 1);
-  exitGfx.fillTriangle(8, T * 0.6, 18, T, 8, T * 1.4);
+  exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T * 1.5, T * 2);
+  exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T * 1.5, T * 2);
+  exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T * 0.6, 18, T, 8, T * 1.4);
   exitGfx.generateTexture("exit_door", T * 1.5, T * 2);
   exitGfx.destroy();
 
@@ -122,18 +106,48 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const exitZone = scene.add.zone(exitX + T * 0.75, exitY + T, T * 1.5, T * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Tutorial hints ─────────────────────────────────────────────────────────
+  // ── Tutorial hints (progressive, world-space) ─────────────────────────────
   const hs: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: "13px", color: "#a0aec0", fontFamily: "monospace",
-    stroke: "#000000", strokeThickness: 2, align: "center",
+    stroke: "#000", strokeThickness: 2, align: "center",
   };
 
-  scene.add.text(160, FLOOR_Y - 110, "← → Move\n↑ / SPACE Jump", hs).setOrigin(0.5);
-  scene.add.text(280, FLOOR_Y - 92, "▼ +1 size", { fontSize: "13px", color: "#27ae60", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
-  scene.add.text(NARROW_X_START + 10, FLOOR_Y - 68, "Narrow duct →\nBurp if too big!", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
-  scene.add.text(870, FLOOR_Y - 105, "Junk food = +2 sizes\n+ ×2 score!", { ...hs, color: "#ff6b9d" }).setOrigin(0.5);
-  scene.add.text(MEDIUM_X_START + 10, FLOOR_Y - 68, "Tight duct →\nBurp once to pass!", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
-  scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
+  // Zone 1: movement controls
+  scene.add.text(170, FLOOR_Y - 130, "← → Move\n↑ / SPACE Jump", hs).setOrigin(0.5);
+
+  // Zone 2: elevated platform hint
+  scene.add.text(410, 452 - 36, "↑ Bonus food up here!", {
+    fontSize: "12px", color: "#27ae60", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+  }).setOrigin(0.5);
+
+  // Zone 3: first food hint
+  scene.add.text(490, FLOOR_Y - 88, "▼ Eat this to grow!", {
+    fontSize: "13px", color: "#6fdc8c", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+  }).setOrigin(0.5);
+
+  // Zone 4: wall hints
+  scene.add.text(420, FLOOR_Y - 76, "Too big now! Stand here and wait...", {
+    ...hs, color: "#f39c12",
+  }).setOrigin(0.5);
+  scene.add.text(420, FLOOR_Y - 110, "↗ Watch that ring — when it fills,\nBob burps and shrinks!", {
+    ...hs, color: "#e67e22",
+  }).setOrigin(0.5);
+
+  // Zone 5: junk food explanation
+  scene.add.text(650, FLOOR_Y - 88, "▼ Junk food: more pts,\nbut you grow FASTER!", {
+    ...hs, color: "#ff6b9d",
+  }).setOrigin(0.5);
+  scene.add.text(820, FLOOR_Y - 88, "▼ Healthy food:\nsafer but fewer pts", {
+    ...hs, color: "#6fdc8c",
+  }).setOrigin(0.5);
+
+  // Zone 6: exit area
+  scene.add.text(exitX + T * 0.75, exitY - 38, "Not enough pts?\nGo back for more food! ←", {
+    ...hs, color: "#a0aec0",
+  }).setOrigin(0.5);
+  scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", {
+    fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+  }).setOrigin(0.5);
 
   return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL_WIDTH, levelHeight: LEVEL_HEIGHT };
 }

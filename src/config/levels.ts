@@ -54,22 +54,25 @@ export const LEVELS: LevelConfig[] = [
     key: "tutorial",
     timeLimit: null,
     music: "menu",
-    scoreThreshold: 0,
+    scoreThreshold: 200, // exit locked until 200 pts collected
     name: "Tutorial",
     playerStart: { x: 80, y: 514 },
-    // RULE: food is ONLY in open sections — never inside a duct.
-    // Open sections: x=32-490, x=750-900, x=1230-1568.
+    // FOOD RULE: all food in open zones — never inside any duct or under a ceiling.
+    //
+    // Open zones:
+    //   x=32-530    (left of THE WALL)  — grapes on elevated platform (x=360-460, y=452), apple on ground
+    //   x=562-1568  (right of THE WALL) — burger, watermelon, exit
+    //
+    // Backtrack design: apple(50)+burger(100)=150 → exit locked → go back for grapes(50) or watermelon(50)
     foods: [
-      // Section 1 (x=32-490): one healthy food, Bob grows to stage 1
-      { x: 280,  y: 500, type: "apple"      }, // +1 → stage 1
-      // On top of the narrow duct ceiling slab — bonus for precise jump
-      { x: 620,  y: 429, type: "watermelon" }, // +1 → extra stage for skilled players
-      // Section 2 (x=750-900)
-      { x: 820,  y: 500, type: "strawberry" }, // +1 → stage 2
-      // Section 3 (x=1230-1568): after medium duct
-      { x: 1310, y: 500, type: "orange"     }, // +1 → stage 3
-      { x: 1380, y: 500, type: "burger"     }, // +2 → stage 5
-      { x: 1430, y: 500, type: "carrot"     }, // +1 → stage 6
+      // LEFT of wall — elevated bonus (easy to miss on first pass)
+      { x: 410, y: 428, type: "grapes"     }, // on platform (top y=452, food center 452-24=428); +1 → stage 1; 50pts
+      // LEFT of wall — first mandatory food encounter
+      { x: 490, y: 500, type: "apple"      }, // ground level; +1 → stage 1; 50pts
+      // RIGHT of wall — junk food lesson
+      { x: 650, y: 500, type: "burger"     }, // +2 → stage 3; 100pts (tempting, but grows fast!)
+      // RIGHT of wall — healthy alternative comparison
+      { x: 820, y: 500, type: "watermelon" }, // +1 → stage 4; 50pts
     ],
   },
 
