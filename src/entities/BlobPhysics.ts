@@ -1,24 +1,35 @@
 /**
- * Circle physics engine for Bob.
+ * Rounded-square physics engine for Bob.
  *
- * Bob is treated as a CIRCLE whose diameter equals his bounding-box width.
- * This matches the rounded-square visual: corners never collide, so Bob
- * doesn't snag on ceiling/wall edges where the visual shows clear space.
+ * Bob's hitbox is a rounded rectangle (rounded square) whose corner radius is
+ * CORNER_RATIO × half-width. This matches the visual art precisely — corners
+ * are empty space, so Bob slides past ceiling/wall edges smoothly instead of
+ * snagging on them with a hard square corner.
  *
- * Gap gating is unchanged: the circle's vertical extent (diameter) is
- * identical to the old bounding-box height.
+ * Collision uses the rounded-rectangle SDF (signed distance function):
  *
- * Resize and world-bound clamping still use the bounding box (bx, by, bw, bh)
- * — the circle radius is always derived as bw/2.
+ *   p   = nearest point on wall AABB − Bob's centre
+ *   q   = (max(|px| − (hw−r), 0)·sign(px),
+ *          max(|py| − (hh−r), 0)·sign(py))
+ *   sdf = length(q) − r
+ *
+ * sdf < 0  →  collision, penetration = −sdf, contact normal = q/|q|.
+ *
+ * For flat surfaces qx or qy is zero, giving a pure axis-aligned normal
+ * (identical to AABB). In corner regions both are non-zero, giving a smooth
+ * diagonal normal that guides Bob around the corner instead of stopping him.
  */
 
 export interface Rect { x: number; y: number; w: number; h: number; }
 
+/** Corner radius as a fraction of the hitbox half-width. */
+const CORNER_RATIO = 0.35;
+
 export class BlobPhysics {
-  /** Top-left corner of the bounding box (= circle centre − radius). */
+  /** Top-left corner of the bounding box. */
   bx: number;
   by: number;
-  /** Diameter of the circle (= bw = bh, Bob is always square). */
+  /** Width and height (Bob is always square, bw === bh). */
   bw: number;
   bh: number;
   vx = 0;
@@ -40,7 +51,6 @@ export class BlobPhysics {
   get cy()     { return this.by + this.bh / 2; }
   get bottom() { return this.by + this.bh; }
   get right()  { return this.bx + this.bw; }
-  get radius() { return this.bw / 2; }
 
   // ─── Level geometry ─────────────────────────────────────────────────────────
 
@@ -64,7 +74,7 @@ export class BlobPhysics {
     this.bx += this.vx * delta;
     this.by += this.vy * delta;
 
-    // Hard world bounds (bounding-box based)
+    // Hard world bounds (bounding-box edges)
     if (this.bx < 0)          { this.bx = 0;                this.vx = Math.max(0, this.vx); }
     if (this.right > worldW)  { this.bx = worldW - this.bw; this.vx = Math.min(0, this.vx); }
     if (this.by < 0)          { this.by = 0;                this.vy = Math.max(0, this.vy); }
@@ -72,7 +82,7 @@ export class BlobPhysics {
 
     this.onGround = false;
 
-    // Two passes for stability in wedged situations
+    // Two passes improve stability in wedge/corner situations
     for (let pass = 0; pass < 2; pass++) {
       for (const r of this.rects) {
         this.resolve(r);
@@ -80,69 +90,77 @@ export class BlobPhysics {
     }
   }
 
-  // ─── Overlap query (circle vs AABB) ─────────────────────────────────────────
+  // ─── Overlap query — rounded-rect vs AABB ───────────────────────────────────
 
   overlapsRect(x: number, y: number, w: number, h: number): boolean {
-    const cx = this.cx, cy = this.cy, rad = this.radius;
+    const cx = this.cx, cy = this.cy;
+    const hw = this.bw / 2, hh = this.bh / 2;
+    const cr = hw * CORNER_RATIO;
+
+    // Nearest point on query rect to Bob's centre
     const nearX = Math.max(x, Math.min(cx, x + w));
     const nearY = Math.max(y, Math.min(cy, y + h));
-    const dx = cx - nearX, dy = cy - nearY;
-    return dx * dx + dy * dy < rad * rad;
+    const px = nearX - cx, py = nearY - cy;
+
+    // Rounded-rect SDF: distance past the inner rectangle to the nearest point
+    const qx = Math.max(Math.abs(px) - (hw - cr), 0);
+    const qy = Math.max(Math.abs(py) - (hh - cr), 0);
+
+    return qx * qx + qy * qy < cr * cr; // sdf < 0
   }
 
-  // ─── Circle vs AABB resolver ─────────────────────────────────────────────────
-  //
-  // Algorithm: find the closest point on the rect to the circle centre.
-  // If distance < radius, push the circle away along the contact normal.
-  // The normal is derived from the contact point, so floors push up,
-  // ceilings push down, and walls push horizontally — including at corners,
-  // where the circle slides off smoothly instead of snagging.
+  // ─── Rounded-rectangle SDF resolver ─────────────────────────────────────────
 
   private resolve(r: Rect) {
-    const cx  = this.cx;
-    const cy  = this.cy;
-    const rad = this.radius;
+    const cx = this.cx, cy = this.cy;
+    const hw = this.bw / 2, hh = this.bh / 2;
+    const cr = hw * CORNER_RATIO; // corner radius
 
-    // Closest point on rect to circle centre
+    // Nearest point on wall rect to Bob's centre
     const nearX = Math.max(r.x, Math.min(cx, r.x + r.w));
     const nearY = Math.max(r.y, Math.min(cy, r.y + r.h));
+    const px = nearX - cx;
+    const py = nearY - cy;
 
-    const dx = cx - nearX;
-    const dy = cy - nearY;
-    const distSq = dx * dx + dy * dy;
+    // SDF helper vectors
+    // qx/qy are zero on flat faces, non-zero in corner regions
+    const qx = Math.max(Math.abs(px) - (hw - cr), 0) * Math.sign(px || 1);
+    const qy = Math.max(Math.abs(py) - (hh - cr), 0) * Math.sign(py || 1);
+    const ql  = Math.sqrt(qx * qx + qy * qy);
+    const sdf = ql - cr;
 
-    if (distSq >= rad * rad) return; // no collision
+    if (sdf >= 0) return; // no collision
+    const penetration = -sdf;
 
-    const dist = Math.sqrt(distSq);
-
-    if (dist < 0.0001) {
-      // Circle centre exactly on rect edge — push straight up as fallback
-      this.by -= rad;
-      this.vy  = Math.min(0, this.vy);
-      this.onGround = true;
-      return;
+    // Contact normal: points from Bob's centre toward the wall (inward)
+    let nx: number, ny: number;
+    if (ql < 0.0001) {
+      // Nearest AABB point inside inner rect (deep penetration) — axis fallback
+      if (Math.abs(px) >= Math.abs(py)) {
+        nx = Math.sign(px || 1); ny = 0;
+      } else {
+        nx = 0; ny = Math.sign(py || 1);
+      }
+    } else {
+      nx = qx / ql;
+      ny = qy / ql;
     }
 
-    // Contact normal (circle centre → closest point, outward from rect)
-    const nx = dx / dist;
-    const ny = dy / dist;
-    const penetration = rad - dist;
+    // Push Bob away from the wall
+    this.bx -= nx * penetration;
+    this.by -= ny * penetration;
 
-    // Push circle out
-    this.bx += nx * penetration;
-    this.by += ny * penetration;
-
-    // Zero velocity component along the normal (only if moving into surface)
-    const velDotNormal = this.vx * nx + this.vy * ny;
-    if (velDotNormal < 0) {
-      this.vx -= velDotNormal * nx;
-      this.vy -= velDotNormal * ny;
+    // Zero the velocity component moving into the surface
+    const vdn = this.vx * nx + this.vy * ny;
+    if (vdn > 0) {
+      this.vx -= vdn * nx;
+      this.vy -= vdn * ny;
     }
 
-    // Floor: normal points upward (ny < 0 means circle is above the contact)
-    if (ny < -0.5) this.onGround = true;
+    // Floor detection: normal has downward component (wall below Bob)
+    if (ny > 0.5) this.onGround = true;
 
-    // Ceiling: clamp downward velocity to prevent sticking
-    if (ny > 0.5) this.vy = Math.max(0, this.vy);
+    // Ceiling hit: prevent sticking by clamping upward velocity
+    if (ny < -0.5) this.vy = Math.max(0, this.vy);
   }
 }
