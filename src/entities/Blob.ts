@@ -46,7 +46,8 @@ export class Blob {
 
   private applyStage(stage: StageIndex) {
     const pb = this.body.body as Phaser.Physics.Arcade.Body;
-    // Save bottom BEFORE resize — this is the ground (or air) position to preserve.
+    // prevBottom is from the last completed physics step — body hasn't been
+    // recalculated for this frame yet (we're in scene.update(), before preUpdate).
     const prevBottom = pb.bottom;
 
     this.stage = stage;
@@ -55,12 +56,11 @@ export class Blob {
     this.body.setScale(scale);
     this.body.setSize(width, height);
 
-    // After setSize: pb.height = newH but pb.position.y is still the old value,
-    // so pb.bottom = old_pos + newH (may be below floor).
-    // Setting pb.position.y directly fixes it for the current physics step.
-    // postUpdate() then writes  sprite.y = pb.position.y + pb.halfHeight
-    // so the next frame's preUpdate() also lands correctly.
-    pb.position.y = prevBottom - height;
+    // body.bottom = sprite.y + height/2  (verified from Phaser arcade formula).
+    // Set sprite.y so the upcoming preUpdate() computes:
+    //   pb.position.y = sprite.y - displayOriginY + offsetY = prevBottom - height
+    // → pb.bottom = prevBottom (unchanged)  ✓
+    this.body.y = prevBottom - height / 2;
 
     if (!this.isEating) this.refreshAnim();
 
@@ -109,33 +109,36 @@ export class Blob {
             this.spawnBurpBubble();
 
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Phase 4: snap to smaller size — same correction as applyStage
-              const pb2 = this.body.body as Phaser.Physics.Arcade.Body;
-              const prevBottom2 = pb2.bottom;
-              const { scale, width, height } = SIZE_STAGES[newStage];
-              this.stage = newStage;
-              this.body.setScale(scale);
-              this.body.setSize(width, height);
-              pb2.position.y = prevBottom2 - height;
+              // Defer the resize to scene.update() so it runs BEFORE the next
+              // physics preUpdate — same reason as the eat deferral in GameScene.
+              this.scene.time.delayedCall(0, () => {
+                const pb2 = this.body.body as Phaser.Physics.Arcade.Body;
+                const prevBottom2 = pb2.bottom;
+                const { scale, width, height } = SIZE_STAGES[newStage];
+                this.stage = newStage;
+                this.body.setScale(scale);
+                this.body.setSize(width, height);
+                this.body.y = prevBottom2 - height / 2;
 
-              // Wide pop then settle
-              this.scene.tweens.add({
-                targets: this.body,
-                scaleX: scale * 1.3,
-                duration: 70,
-                ease: "Back.Out",
-                onComplete: () => {
-                  this.scene.tweens.add({
-                    targets: this.body,
-                    scaleX: scale,
-                    duration: 260,
-                    ease: "Elastic.Out",
-                    onComplete: () => {
-                      this.isBurping = false;
-                      this.refreshAnim();
-                    },
-                  });
-                },
+                // Wide pop then settle
+                this.scene.tweens.add({
+                  targets: this.body,
+                  scaleX: scale * 1.3,
+                  duration: 70,
+                  ease: "Back.Out",
+                  onComplete: () => {
+                    this.scene.tweens.add({
+                      targets: this.body,
+                      scaleX: scale,
+                      duration: 260,
+                      ease: "Elastic.Out",
+                      onComplete: () => {
+                        this.isBurping = false;
+                        this.refreshAnim();
+                      },
+                    });
+                  },
+                });
               });
             });
           },

@@ -160,7 +160,11 @@ export class GameScene extends Phaser.Scene {
 
     // Play eat animation concurrently with swallow tween
     this.blob.playEatAnim();
-    this.sizeSystem.eat(growth);
+    // Defer the actual size change to the next frame's scene.update(),
+    // which runs BEFORE the physics step's preUpdate().
+    // Resizing during an overlap callback (mid-physics-step) causes the body
+    // to temporarily breach the floor before collision resolution can fix it.
+    this.time.delayedCall(0, () => this.sizeSystem.eat(growth));
 
     this.score += pts;
     const ui = this.scene.get("UIScene");
