@@ -37,8 +37,9 @@ export class ResultScene extends Phaser.Scene {
       strokeThickness: 6,
     }).setOrigin(0.5);
 
-    // Bob sprite
+    // Bob sprite — scale 2 matches the ~1.93× camera zoom used in-game
     const blobSpr = this.add.sprite(GAME_WIDTH / 2, 590, "blob_stage0", 0);
+    blobSpr.setScale(2);
     if (win) {
       blobSpr.play("blob_idle_0");
     } else {
