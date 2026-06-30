@@ -23,7 +23,7 @@ import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
 
 const T = TILE_SIZE; // 32
 
-export const LEVEL_WIDTH  = 1600;
+export const LEVEL_WIDTH  = 2400;
 export const LEVEL_HEIGHT = 560;
 const FLOOR_Y = LEVEL_HEIGHT - T; // 528
 
@@ -79,17 +79,42 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   wall(0,               0,       LEVEL_WIDTH, T);            // ceiling
   wall(0,               FLOOR_Y, LEVEL_WIDTH, T);            // floor
 
-  // ── Elevated platform for bonus grapes (x=360–460, top y=452) ──────────────
-  // Rise from floor = 528-452=76px; stages 0-4 can jump to it.
-  // Food placed on top is in an open zone — no ceiling above.
-  wall(360, 452, 100, T);
+  // ── Elevated platform for bonus grapes (x=580–700, top y=452) ──────────────
+  // Rise from floor = 76px; stages 0-4 can jump to it. Open above — safe zone.
+  wall(580, 452, 120, T);
 
-  // ── THE WALL (x=530): full-height, 37px gap at floor level ─────────────────
-  // Gap: y=491–528 (37px).
-  // Stage 0 (28px body): body_top=500 ≥ 491 → fits ✓
-  // Stage 1 (47px body): body_top=481 < 491 → hits upper wall ✗ (BLOCKED)
-  // Player must wait for burp (6.7s) to shrink back to stage 0.
-  vertWall(530, 491, 528);
+  // ── TWO-BAR STACK (x=900–1060): too tall to jump over, gap too narrow for stage 1
+  //
+  //  ceiling (y=32)
+  //  ═══════════  upper beam  y=32–262  (touches ceiling, blocks jumping over)
+  //               open air gap y=262–390
+  //  ═══════════  lower beam  y=390–491
+  //               floor gap   y=491–528 = 37px  (stage 0 only)
+  //  floor (y=528)
+  //
+  // Stage 0 (28px): body_top=500 ≥ 491 → fits through floor gap ✓
+  // Stage 1 (47px): body_top=481 < 491 → collides with lower beam ✗ BLOCKED
+  // Can't jump over: upper beam starts at global ceiling, unreachable.
+  wall(900,  T,    160, 230); // upper beam — ceiling to y=262
+  wall(900,  390,  160, 101); // lower beam — y=390 to y=491
+
+  // ── L-SHAPED TUNNEL (x=1400–1800): the backtrack section ──────────────────
+  //
+  // Shape (Γ / rotated-L):
+  //   vertical arm  — jump up at x=1400 from floor (y=528) to tunnel floor (y=424)
+  //   horizontal arm — narrow tunnel from x=1400 to x=1800
+  //   drop at x=1800 back to main floor
+  //
+  // Tunnel dimensions:
+  //   ceiling slab bottom: y=368  (wall top at y=336)
+  //   tunnel floor top:    y=424  (wall top at y=424)
+  //   gap:                 424-368 = 56px → stage 0–1 fit, stage 2 (66px) blocked
+  //   rise from floor:     528-424 = 104px → stages 0–2 can jump (stage 3 jump=102px, just short)
+  //
+  // Watermelon at x=1600 inside the tunnel — food centre at y=424-24=400.
+  // On the backtrack: player re-enters from x=1800, walks left to x=1600, gets food.
+  wall(1400, 336, 400, T); // tunnel ceiling
+  wall(1400, 424, 400, T); // tunnel floor platform
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL_WIDTH - T * 3;
@@ -106,43 +131,52 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const exitZone = scene.add.zone(exitX + T * 0.75, exitY + T, T * 1.5, T * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Tutorial hints (progressive, world-space) ─────────────────────────────
+  // ── Tutorial hints (progressive, world-space, well-spaced) ──────────────
   const hs: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: "13px", color: "#a0aec0", fontFamily: "monospace",
     stroke: "#000", strokeThickness: 2, align: "center",
   };
 
-  // Zone 1: movement controls
-  scene.add.text(170, FLOOR_Y - 130, "← → Move\n↑ / SPACE Jump", hs).setOrigin(0.5);
+  // Zone 1: movement (centre of open arena)
+  scene.add.text(350, FLOOR_Y - 150, "← → Move   ↑ / SPACE Jump", hs).setOrigin(0.5);
+  scene.add.text(350, FLOOR_Y - 110, "Try jumping over things!", { ...hs }).setOrigin(0.5);
 
-  // Zone 2: elevated platform hint
-  scene.add.text(410, 452 - 36, "↑ Bonus food up here!", {
+  // Zone 2: elevated platform
+  scene.add.text(640, 424 - 32, "↑ Bonus food! Jump up.", {
     fontSize: "12px", color: "#27ae60", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
   }).setOrigin(0.5);
 
-  // Zone 3: first food hint
-  scene.add.text(490, FLOOR_Y - 88, "▼ Eat this to grow!", {
+  // Zone 3: first food
+  scene.add.text(800, FLOOR_Y - 100, "▼ Eat this to grow!", {
     fontSize: "13px", color: "#6fdc8c", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
   }).setOrigin(0.5);
 
-  // Zone 4: wall hints
-  scene.add.text(420, FLOOR_Y - 76, "Too big now! Stand here and wait...", {
+  // Zone 4: two-bar stack hints (clear of each other vertically)
+  scene.add.text(815, FLOOR_Y - 72, "You grew! Too big to squeeze through.", {
     ...hs, color: "#f39c12",
   }).setOrigin(0.5);
-  scene.add.text(420, FLOOR_Y - 110, "↗ Watch that ring — when it fills,\nBob burps and shrinks!", {
+  scene.add.text(815, FLOOR_Y - 110, "Stand still and wait here...", {
+    ...hs, color: "#f39c12",
+  }).setOrigin(0.5);
+  scene.add.text(815, FLOOR_Y - 148, "↗ Watch that ring — when full, Bob burps and shrinks!", {
     ...hs, color: "#e67e22",
   }).setOrigin(0.5);
 
-  // Zone 5: junk food explanation
-  scene.add.text(650, FLOOR_Y - 88, "▼ Junk food: more pts,\nbut you grow FASTER!", {
+  // Zone 5: after the stack — junk food lesson (staggered L/R so they don't overlap)
+  scene.add.text(1200, FLOOR_Y - 110, "▼ JUNK FOOD", {
+    fontSize: "13px", color: "#ff6b9d", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+  }).setOrigin(0.5);
+  scene.add.text(1200, FLOOR_Y - 80, "2× points, but you\ngrow TWICE as fast!", {
     ...hs, color: "#ff6b9d",
   }).setOrigin(0.5);
-  scene.add.text(820, FLOOR_Y - 88, "▼ Healthy food:\nsafer but fewer pts", {
-    ...hs, color: "#6fdc8c",
+
+  // Zone 6: L-tunnel hint (above tunnel entrance)
+  scene.add.text(1600, 336 - 28, "Jump up for bonus food ↓\n(only small Bob fits!)", {
+    ...hs, color: "#f1c40f",
   }).setOrigin(0.5);
 
-  // Zone 6: exit area
-  scene.add.text(exitX + T * 0.75, exitY - 38, "Not enough pts?\nGo back for more food! ←", {
+  // Zone 7: near exit
+  scene.add.text(exitX + T * 0.75, exitY - 64, "Not enough pts? Go back!\nTry the tunnel at x=1400 ←", {
     ...hs, color: "#a0aec0",
   }).setOrigin(0.5);
   scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", {

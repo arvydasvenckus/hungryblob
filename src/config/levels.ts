@@ -64,15 +64,20 @@ export const LEVELS: LevelConfig[] = [
     //   x=562-1568  (right of THE WALL) — burger, watermelon, exit
     //
     // Backtrack design: apple(50)+burger(100)=150 → exit locked → go back for grapes(50) or watermelon(50)
+    // Open zones (food-safe, never under a ceiling):
+    //   x=32-900     Left of two-bar stack: elevated platform (x=580-700,y=452), ground
+    //   x=1060-1400  Between stack and L-tunnel: open floor
+    //   L-tunnel interior x=1400-1800 at y=368-424: tunnel floor platform (open above when inside)
+    //   x=1800-2400  After tunnel: open floor to exit
     foods: [
-      // LEFT of wall — elevated bonus (easy to miss on first pass)
-      { x: 410, y: 428, type: "grapes"     }, // on platform (top y=452, food center 452-24=428); +1 → stage 1; 50pts
-      // LEFT of wall — first mandatory food encounter
-      { x: 490, y: 500, type: "apple"      }, // ground level; +1 → stage 1; 50pts
-      // RIGHT of wall — junk food lesson
-      { x: 650, y: 500, type: "burger"     }, // +2 → stage 3; 100pts (tempting, but grows fast!)
-      // RIGHT of wall — healthy alternative comparison
-      { x: 820, y: 500, type: "watermelon" }, // +1 → stage 4; 50pts
+      // LEFT of stack — elevated bonus (on platform top y=452, centre y=428)
+      { x: 640,  y: 428, type: "grapes"     }, // +1 → stage 1; 50 pts. Easy to miss = backtrack target
+      // LEFT of stack — first required food
+      { x: 800,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts. Must eat BEFORE reaching the stack
+      // RIGHT of stack — junk food lesson
+      { x: 1200, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts. Big score but big growth!
+      // INSIDE L-tunnel — bonus watermelon requiring tunnel navigation
+      { x: 1600, y: 400, type: "watermelon" }, // +1; 50 pts. Only stages 0-1 can fit through tunnel (56px gap)
     ],
   },
 
