@@ -50,16 +50,16 @@ export const LEVELS: LevelConfig[] = [
     name: "Air Ducts",
     playerStart: { x: 80, y: 514 },
     // RULE: food is ONLY in open sections — never inside a duct.
-    // Open sections: x=32-490, x=750-1000, x=1230-1568.
+    // Open sections: x=32-490, x=750-900, x=1230-1568.
     foods: [
       // Section 1 (x=32-490): one healthy food, Bob grows to stage 1
       { x: 280,  y: 500, type: "apple"      }, // +1 → stage 1
-      // Section 2 (x=750-1000): grow to stage 4 before medium duct
+      // Section 2 (x=750-900): 150px gap between ducts — small Bob can jump between platform tops
       { x: 820,  y: 500, type: "strawberry" }, // +1 → stage 2
-      { x: 920,  y: 500, type: "burger"     }, // +2 → stage 4 MAX
-      // Section 3 (x=1230-1568): after medium duct, Bob digested to stage 3
-      { x: 1310, y: 500, type: "orange"     }, // +1 → stage 4
-      { x: 1430, y: 500, type: "carrot"     }, // +1 → stage 4 (stays, score)
+      // Section 3 (x=1230-1568): after medium duct
+      { x: 1310, y: 500, type: "orange"     }, // +1 → stage 3
+      { x: 1380, y: 500, type: "burger"     }, // +2 → stage 4+ (caps at MAX)
+      { x: 1430, y: 500, type: "carrot"     }, // +1 → stays MAX (score)
     ],
   },
 ];

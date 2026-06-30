@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_WIDTH, SHRINK_COOLDOWN_MS, GRAVITY, STRESS_THRESHOLD } from "../config/constants";
+import { GAME_WIDTH, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
 import { LEVELS, getFoodGrowth, getFoodScore, getFoodCategory } from "../config/levels";
 import { SizeSystem } from "../systems/SizeSystem";
 import { TimerSystem } from "../systems/TimerSystem";
@@ -15,7 +15,6 @@ export class GameScene extends Phaser.Scene {
   private timerSystem!: TimerSystem;
   private soundSystem!: SoundSystem;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private platforms!: Phaser.Physics.Arcade.StaticGroup;
   private exitZone!: Phaser.GameObjects.Zone;
   private score = 0;
   private levelIndex = 0;
@@ -37,12 +36,13 @@ export class GameScene extends Phaser.Scene {
   create() {
     const levelCfg = LEVELS[this.levelIndex];
 
+    // We still set world gravity to 0 — BlobPhysics handles Bob's gravity.
+    // Phaser arcade physics is only used for the level's static geometry and food.
     this.physics.world.setBounds(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-    this.physics.world.gravity.y = GRAVITY;
+    this.physics.world.gravity.y = 0;
 
     const { platforms, exitZone } = buildLevel1(this);
-    this.platforms = platforms;
-    this.exitZone  = exitZone;
+    this.exitZone = exitZone;
 
     this.sizeSystem  = new SizeSystem(() => Date.now());
     this.timerSystem = new TimerSystem(levelCfg.timeLimit);
@@ -50,35 +50,26 @@ export class GameScene extends Phaser.Scene {
 
     const { x, y } = levelCfg.playerStart;
     this.blob = new Blob(this, x, y, this.sizeSystem);
-    this.physics.add.collider(this.blob.body, this.platforms);
 
-    levelCfg.foods.forEach((f) => {
-      const food = new Food(this, f.x, f.y, f.type);
-      this.foods.push(food);
-      this.physics.add.overlap(
-        this.blob.body,
-        food.sprite,
-        () => this.eatFood(food),
-        undefined,
-        this
-      );
+    // Extract static body rectangles and register them with BlobPhysics.
+    // This replaces physics.add.collider — BlobPhysics does AABB resolution itself.
+    platforms.children.entries.forEach((go) => {
+      const b = (go as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.StaticBody;
+      this.blob.physics.addRect({ x: b.x, y: b.y, w: b.width, h: b.height });
     });
 
-    this.physics.add.overlap(
-      this.blob.body,
-      this.exitZone,
-      () => this.completeLevel(),
-      undefined,
-      this
-    );
+    // Spawn food items (no overlap callbacks — checked manually in update()).
+    levelCfg.foods.forEach((f) => {
+      this.foods.push(new Food(this, f.x, f.y, f.type));
+    });
 
+    // Camera follows the visual sprite.
     this.cameras.main.setBounds(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-    this.cameras.main.startFollow(this.blob.body, true, 0.1, 0.1);
+    this.cameras.main.startFollow(this.blob.visual, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(120, 80);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
-    // Always ensure UIScene runs alongside — safe to call even if already active
     if (!this.scene.isActive("UIScene")) {
       this.scene.launch("UIScene");
     }
@@ -101,7 +92,6 @@ export class GameScene extends Phaser.Scene {
       const ui = this.scene.get("UIScene");
       ui.events.emit("update-timer", remaining);
 
-      // Stress at 15s
       if (!this.stressTriggered && remaining <= STRESS_THRESHOLD) {
         this.stressTriggered = true;
         this.blob.setStressed(true);
@@ -114,8 +104,6 @@ export class GameScene extends Phaser.Scene {
 
     this.timerSystem.start();
 
-    // UIScene was just launched — its create() runs next frame.
-    // Defer the initial UI sync so UIScene's objects exist when we emit.
     this.time.delayedCall(0, () => {
       const ui = this.scene.get("UIScene");
       if (ui) {
@@ -130,10 +118,8 @@ export class GameScene extends Phaser.Scene {
 
   private eatFood(food: Food) {
     if (!food.sprite.active) return;
-    // Mark inactive IMMEDIATELY — disableBody(false,false) leaves active=true,
-    // letting the overlap fire again in the same physics step (double-eat).
     food.sprite.setActive(false);
-    food.sprite.disableBody(true, false); // disable physics, keep visible for tween
+    food.sprite.disableBody(true, false);
 
     const type     = food.foodType;
     const category = getFoodCategory(type);
@@ -146,19 +132,16 @@ export class GameScene extends Phaser.Scene {
     const foodSprite = food.sprite;
     this.foods = this.foods.filter((f) => f !== food);
 
+    // Swallow tween: food flies toward Bob's centre
     this.tweens.add({
       targets: foodSprite,
-      x: this.blob.body.x,
-      y: this.blob.body.y - 8,
-      scaleX: 0.15,
-      scaleY: 0.15,
-      alpha: 0,
-      duration: 220,
-      ease: "Quad.In",
+      x: this.blob.visual.x,
+      y: this.blob.visual.y - 8,
+      scaleX: 0.15, scaleY: 0.15, alpha: 0,
+      duration: 220, ease: "Quad.In",
       onComplete: () => foodSprite.destroy(),
     });
 
-    // Play eat animation concurrently with swallow tween
     this.blob.playEatAnim();
     this.sizeSystem.eat(growth);
 
@@ -166,22 +149,16 @@ export class GameScene extends Phaser.Scene {
     const ui = this.scene.get("UIScene");
     ui.events.emit("update-score", this.score);
 
-    // Score pop with colour by category
     const popColor = category === "healthy" ? "#6fdc8c" : "#f39c12";
     const popText  = category === "healthy" ? `+${pts}` : `+${pts} ×2!`;
-    const { x, y } = this.blob.body;
+    const { x, y } = this.blob.visual;
     const pop = this.add.text(x, y - 30, popText, {
-      fontSize: "17px",
-      color: popColor,
+      fontSize: "17px", color: popColor,
       fontFamily: "monospace",
-      stroke: "#000000",
-      strokeThickness: 2,
+      stroke: "#000000", strokeThickness: 2,
     }).setOrigin(0.5).setDepth(5);
     this.tweens.add({
-      targets: pop,
-      y: y - 85,
-      alpha: 0,
-      duration: 850,
+      targets: pop, y: y - 85, alpha: 0, duration: 850,
       onComplete: () => pop.destroy(),
     });
   }
@@ -192,12 +169,9 @@ export class GameScene extends Phaser.Scene {
     this.timerSystem.pause();
     this.soundSystem.levelComplete();
 
-    // const timeBonus = Math.floor(this.timerSystem.getRemaining()) * 10;
-    // this.score += timeBonus;
-
     const ui = this.scene.get("UIScene");
     ui.events.emit("update-score", this.score);
-    ui.events.emit("show-message", `LEVEL COMPLETE!`, "#6fdc8c");
+    ui.events.emit("show-message", "LEVEL COMPLETE!", "#6fdc8c");
 
     this.time.delayedCall(3000, () => {
       this.scene.stop("UIScene");
@@ -213,8 +187,7 @@ export class GameScene extends Phaser.Scene {
     const ui = this.scene.get("UIScene");
     ui.events.emit("show-message", "TIME'S UP!", "#e74c3c");
 
-    this.blob.body.setVelocity(0, 0);
-    this.blob.playSadAnim(); // grayscale + sad face
+    this.blob.playSadAnim();
 
     this.time.delayedCall(2500, () => {
       this.scene.stop("UIScene");
@@ -232,10 +205,31 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  update() {
+  update(_time: number, delta: number) {
     if (this.gameOver || this.levelComplete) return;
-    this.blob.update(this.cursors);
+
+    this.blob.update(this.cursors, delta);
     this.timerSystem.update();
+
+    // Manual food overlap checks (replaces physics.add.overlap).
+    // Process at most one food per frame to avoid double-eat edge cases.
+    for (const food of this.foods) {
+      if (!food.sprite.active) continue;
+      const fx = food.sprite.x - 24;
+      const fy = food.sprite.y - 24;
+      if (this.blob.physics.overlapsRect(fx, fy, 48, 48)) {
+        this.eatFood(food);
+        break;
+      }
+    }
+
+    // Exit zone overlap check.
+    if (!this.levelComplete) {
+      const eb = this.exitZone.body as Phaser.Physics.Arcade.StaticBody;
+      if (this.blob.physics.overlapsRect(eb.x, eb.y, eb.width, eb.height)) {
+        this.completeLevel();
+      }
+    }
 
     const pct = this.sizeSystem.getShrinkCooldownRemaining() / SHRINK_COOLDOWN_MS;
     const ui = this.scene.get("UIScene");

@@ -17,16 +17,16 @@ import { TILE_SIZE, SIZE_STAGES } from "../config/constants";
  *
  * Open sections (food-safe zones):
  *   Section 1:  x = 32  → 490   (before narrow duct)
- *   Section 2:  x = 750 → 1000  (between ducts)
+ *   Section 2:  x = 750 → 900   (between ducts — 150px gap, jumpable when small)
  *   Section 3:  x = 1230 → 1568 (after medium duct)  ← exit also here
  *
  * Guided food sequence:
  *   [Section 1]  apple (+1)          → Stage 1
  *   [NARROW DUCT x=490–750]
- *   [Section 2]  strawberry (+1)     → Stage 2
- *                burger (+2)         → Stage 4 MAX
- *   [MEDIUM DUCT x=1000–1230]  need to burp once (4→3) to pass
- *   [Section 3]  orange (+1)         → Stage 4
+ *   [Section 2]  strawberry (+1)     → Stage 2  (small Bob can jump between duct tops here)
+ *   [MEDIUM DUCT x=900–1230]   need to burp once (4→3) to pass
+ *   [Section 3]  orange (+1)         → Stage 3
+ *                burger (+2)         → Stage 4 (or 5 → stays at 4 MAX)
  *                carrot (+1)         → Stage 4 (stays max)
  *   [EXIT x≈1510]
  */
@@ -43,7 +43,7 @@ const FLOOR_Y = LEVEL_HEIGHT - T; // 528
 // Duct x-ranges (used to enforce the "no food inside ducts" rule visually)
 const NARROW_X_START = 490;
 const NARROW_X_END   = 750;
-const MEDIUM_X_START = 1000;
+const MEDIUM_X_START = 900;
 const MEDIUM_X_END   = 1230;
 
 export interface LevelObjects {
