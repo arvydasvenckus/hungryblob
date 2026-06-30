@@ -45,10 +45,9 @@ export class Blob {
   //  causing the "fall through floor" bug.)
 
   private applyStage(stage: StageIndex) {
-    const pb = this.body.body as Phaser.Physics.Arcade.Body;
-    // prevBottom is from the last completed physics step — body hasn't been
-    // recalculated for this frame yet (we're in scene.update(), before preUpdate).
+    const pb         = this.body.body as Phaser.Physics.Arcade.Body;
     const prevBottom = pb.bottom;
+    const prevH      = pb.height; // save BEFORE setSize changes it
 
     this.stage = stage;
     const { scale, width, height } = SIZE_STAGES[stage];
@@ -56,11 +55,16 @@ export class Blob {
     this.body.setScale(scale);
     this.body.setSize(width, height);
 
-    // body.bottom = sprite.y + height/2  (verified from Phaser arcade formula).
-    // Set sprite.y so the upcoming preUpdate() computes:
-    //   pb.position.y = sprite.y - displayOriginY + offsetY = prevBottom - height
-    // → pb.bottom = prevBottom (unchanged)  ✓
-    this.body.y = prevBottom - height / 2;
+    // Keep body.bottom = prevBottom regardless of execution context.
+    //
+    // postUpdate does: sprite.y += (position.y_end - prevFrame.y)
+    // prevFrame.y = prevBottom - prevH  (set by preUpdate from old sprite.y)
+    //
+    // We need sprite.y_after_postUpdate = prevBottom - height/2
+    // Solve: sprite.y_before + (prevBottom - height) - (prevBottom - prevH) = prevBottom - height/2
+    //        sprite.y_before = height/2 + prevBottom - prevH
+    pb.position.y = prevBottom - height;           // correct for this physics step
+    this.body.y   = height / 2 + prevBottom - prevH; // correct for postUpdate → next preUpdate
 
     if (!this.isEating) this.refreshAnim();
 
@@ -109,36 +113,35 @@ export class Blob {
             this.spawnBurpBubble();
 
             this.body.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Defer the resize to scene.update() so it runs BEFORE the next
-              // physics preUpdate — same reason as the eat deferral in GameScene.
-              this.scene.time.delayedCall(0, () => {
-                const pb2 = this.body.body as Phaser.Physics.Arcade.Body;
-                const prevBottom2 = pb2.bottom;
-                const { scale, width, height } = SIZE_STAGES[newStage];
-                this.stage = newStage;
-                this.body.setScale(scale);
-                this.body.setSize(width, height);
-                this.body.y = prevBottom2 - height / 2;
+              const pb2        = this.body.body as Phaser.Physics.Arcade.Body;
+              const prevBottom = pb2.bottom;
+              const prevH      = pb2.height;
+              const { scale, width, height } = SIZE_STAGES[newStage];
+              this.stage = newStage;
+              this.body.setScale(scale);
+              this.body.setSize(width, height);
+              // Same two-line formula as applyStage — keeps body.bottom constant
+              pb2.position.y = prevBottom - height;
+              this.body.y    = height / 2 + prevBottom - prevH;
 
-                // Wide pop then settle
-                this.scene.tweens.add({
-                  targets: this.body,
-                  scaleX: scale * 1.3,
-                  duration: 70,
-                  ease: "Back.Out",
-                  onComplete: () => {
-                    this.scene.tweens.add({
-                      targets: this.body,
-                      scaleX: scale,
-                      duration: 260,
-                      ease: "Elastic.Out",
-                      onComplete: () => {
-                        this.isBurping = false;
-                        this.refreshAnim();
-                      },
-                    });
-                  },
-                });
+              // Wide pop then settle
+              this.scene.tweens.add({
+                targets: this.body,
+                scaleX: scale * 1.3,
+                duration: 70,
+                ease: "Back.Out",
+                onComplete: () => {
+                  this.scene.tweens.add({
+                    targets: this.body,
+                    scaleX: scale,
+                    duration: 260,
+                    ease: "Elastic.Out",
+                    onComplete: () => {
+                      this.isBurping = false;
+                      this.refreshAnim();
+                    },
+                  });
+                },
               });
             });
           },
