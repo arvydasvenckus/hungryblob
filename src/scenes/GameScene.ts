@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GAME_WIDTH, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
+import type { StageIndex } from "../config/constants";
 import { LEVELS, getFoodGrowth, getFoodScore, getFoodCategory } from "../config/levels";
 import { SizeSystem } from "../systems/SizeSystem";
 import { TimerSystem } from "../systems/TimerSystem";
@@ -21,6 +22,7 @@ export class GameScene extends Phaser.Scene {
   private gameOver = false;
   private levelComplete = false;
   private stressTriggered = false;
+  private blobWasOnGround = true;
 
   constructor() { super({ key: "GameScene" }); }
 
@@ -46,7 +48,7 @@ export class GameScene extends Phaser.Scene {
 
     this.sizeSystem  = new SizeSystem(() => Date.now());
     this.timerSystem = new TimerSystem(levelCfg.timeLimit);
-    this.soundSystem = new SoundSystem();
+    this.soundSystem = new SoundSystem(this);
 
     const { x, y } = levelCfg.playerStart;
     this.blob = new Blob(this, x, y, this.sizeSystem);
@@ -80,7 +82,8 @@ export class GameScene extends Phaser.Scene {
       ui.events.emit("update-stage", evt.stage);
 
       if (evt.type === "shrink") {
-        this.soundSystem.burp();
+        // Play the burp sound for what Bob WAS before shrinking (one stage higher)
+        this.soundSystem.burp(Math.min(7, evt.stage + 1) as StageIndex);
       } else if (evt.type === "grow" || evt.type === "maxed") {
         this.soundSystem.grow();
       }
@@ -113,6 +116,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
+
+    this.sound.play("bgmusic", { loop: true, volume: 0.4 });
   }
 
   private eatFood(food: Food) {
@@ -125,8 +130,7 @@ export class GameScene extends Phaser.Scene {
     const growth   = getFoodGrowth(type);
     const pts      = getFoodScore(type);
 
-    if (category === "healthy") this.soundSystem.eatHealthy();
-    else                        this.soundSystem.eatUnhealthy();
+    this.soundSystem.eat();
 
     const foodSprite = food.sprite;
     this.foods = this.foods.filter((f) => f !== food);
@@ -166,6 +170,7 @@ export class GameScene extends Phaser.Scene {
     if (this.levelComplete || this.gameOver) return;
     this.levelComplete = true;
     this.timerSystem.pause();
+    this.sound.stopByKey("bgmusic");
     this.soundSystem.levelComplete();
 
     const ui = this.scene.get("UIScene");
@@ -181,6 +186,7 @@ export class GameScene extends Phaser.Scene {
   private failLevel() {
     if (this.levelComplete || this.gameOver) return;
     this.gameOver = true;
+    this.sound.stopByKey("bgmusic");
     this.soundSystem.levelFail();
 
     const ui = this.scene.get("UIScene");
@@ -198,9 +204,11 @@ export class GameScene extends Phaser.Scene {
     if (this.physics.world.isPaused) {
       this.physics.resume();
       this.timerSystem.resume();
+      this.sound.resumeAll();
     } else {
       this.physics.pause();
       this.timerSystem.pause();
+      this.sound.pauseAll();
     }
   }
 
@@ -209,6 +217,13 @@ export class GameScene extends Phaser.Scene {
 
     this.blob.update(this.cursors, delta);
     this.timerSystem.update();
+
+    // Jump sound — fires on the frame Bob leaves the ground moving upward
+    const onGround = this.blob.physics.onGround;
+    if (!onGround && this.blobWasOnGround && this.blob.physics.vy < 0) {
+      this.soundSystem.jump(this.sizeSystem.getStage());
+    }
+    this.blobWasOnGround = onGround;
 
     // Manual food overlap checks (replaces physics.add.overlap).
     // Process at most one food per frame to avoid double-eat edge cases.
@@ -237,6 +252,7 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     this.sizeSystem?.destroy();
+    this.sound.stopByKey("bgmusic");
     this.soundSystem?.destroy();
     this.foods.forEach((f) => f.destroy());
     this.foods = [];

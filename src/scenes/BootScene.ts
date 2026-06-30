@@ -4,7 +4,23 @@ import { SIZE_STAGES } from "../config/constants";
 export class BootScene extends Phaser.Scene {
   constructor() { super({ key: "BootScene" }); }
 
-  preload() {}
+  preload() {
+    this.load.audio("bgmusic", "music/the-show-must-be-go.mp3");
+    // Burps — stage-specific recordings (6 files cover 8 stages)
+    this.load.audio("burp_tiny",     "sounds/burp_tiny.mp3");
+    this.load.audio("burp_small",    "sounds/burp_small.wav");
+    this.load.audio("burp_mid",      "sounds/burp_mid.wav");
+    this.load.audio("burp_medlarge", "sounds/burp_medlarge.wav");
+    this.load.audio("burp_big",      "sounds/burp_big.wav");
+    this.load.audio("burp_huge",     "sounds/burp_huge.wav");
+    // Eat
+    this.load.audio("munch",         "sounds/munch.wav");
+    // Jump/bounce — stage-specific recordings (4 files cover 8 stages)
+    this.load.audio("bounce_tiny",   "sounds/bounce_tiny.wav");
+    this.load.audio("bounce_small",  "sounds/bounce_small.wav");
+    this.load.audio("bounce_big",    "sounds/bounce_big.wav");
+    this.load.audio("bounce_huge",   "sounds/bounce_huge.wav");
+  }
 
   create() {
     this.generateBlobTextures();
