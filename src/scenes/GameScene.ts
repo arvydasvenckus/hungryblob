@@ -7,13 +7,13 @@ import { TimerSystem } from "../systems/TimerSystem";
 import { SoundSystem } from "../systems/SoundSystem";
 import { Blob } from "../entities/Blob";
 import { Food } from "../entities/Food";
-import { buildLevel1, LEVEL_WIDTH, LEVEL_HEIGHT } from "./LevelBuilder";
+import { buildLevel1, buildLevel2, LEVEL_HEIGHT } from "./LevelBuilder";
 
 export class GameScene extends Phaser.Scene {
   private blob!: Blob;
   private foods: Food[] = [];
   private sizeSystem!: SizeSystem;
-  private timerSystem!: TimerSystem;
+  private timerSystem!: TimerSystem | null;
   private soundSystem!: SoundSystem;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private exitZone!: Phaser.GameObjects.Zone;
@@ -33,40 +33,37 @@ export class GameScene extends Phaser.Scene {
     this.levelComplete = false;
     this.stressTriggered = false;
     this.foods = [];
+    this.timerSystem = null;
   }
 
   create() {
     const levelCfg = LEVELS[this.levelIndex];
 
-    // We still set world gravity to 0 — BlobPhysics handles Bob's gravity.
-    // Phaser arcade physics is only used for the level's static geometry and food.
-    this.physics.world.setBounds(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-    this.physics.world.gravity.y = 0;
-
-    const { platforms, exitZone } = buildLevel1(this);
+    // Select the correct level builder
+    const { platforms, exitZone, levelWidth, levelHeight } =
+      this.levelIndex === 0 ? buildLevel1(this) : buildLevel2(this);
     this.exitZone = exitZone;
 
+    this.physics.world.setBounds(0, 0, levelWidth, levelHeight);
+    this.physics.world.gravity.y = 0;
+
     this.sizeSystem  = new SizeSystem(() => Date.now());
-    this.timerSystem = new TimerSystem(levelCfg.timeLimit);
     this.soundSystem = new SoundSystem(this);
 
     const { x, y } = levelCfg.playerStart;
     this.blob = new Blob(this, x, y, this.sizeSystem);
 
-    // Extract static body rectangles and register them with BlobPhysics.
-    // This replaces physics.add.collider — BlobPhysics does AABB resolution itself.
+    // Register level geometry with BlobPhysics
     platforms.children.entries.forEach((go) => {
       const b = (go as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.StaticBody;
       this.blob.physics.addRect({ x: b.x, y: b.y, w: b.width, h: b.height });
     });
 
-    // Spawn food items (no overlap callbacks — checked manually in update()).
     levelCfg.foods.forEach((f) => {
       this.foods.push(new Food(this, f.x, f.y, f.type));
     });
 
-    // Camera follows the visual sprite.
-    this.cameras.main.setBounds(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
+    this.cameras.main.setBounds(0, 0, levelWidth, levelHeight);
     this.cameras.main.startFollow(this.blob.visual, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(120, 80);
 
@@ -82,34 +79,41 @@ export class GameScene extends Phaser.Scene {
       ui.events.emit("update-stage", evt.stage);
 
       if (evt.type === "shrink") {
-        // Play the burp sound for what Bob WAS before shrinking (one stage higher)
         this.soundSystem.burp(Math.min(7, evt.stage + 1) as StageIndex);
       } else if (evt.type === "grow" || evt.type === "maxed") {
         this.soundSystem.grow();
       }
     });
 
-    // Timer → UI
-    this.timerSystem.onTick(({ type, remaining }) => {
-      const ui = this.scene.get("UIScene");
-      ui.events.emit("update-timer", remaining);
+    // Timer — only for timed levels
+    if (levelCfg.timeLimit !== null) {
+      this.timerSystem = new TimerSystem(levelCfg.timeLimit);
 
-      if (!this.stressTriggered && remaining <= STRESS_THRESHOLD) {
-        this.stressTriggered = true;
-        this.blob.setStressed(true);
-        this.soundSystem.stressHeartbeat();
-        ui.events.emit("show-message", "HURRY UP!", "#f39c12");
-      }
+      this.timerSystem.onTick(({ type, remaining }) => {
+        const ui = this.scene.get("UIScene");
+        ui.events.emit("update-timer", remaining);
 
-      if (type === "expired") this.failLevel();
-    });
+        if (!this.stressTriggered && remaining <= STRESS_THRESHOLD) {
+          this.stressTriggered = true;
+          this.blob.setStressed(true);
+          this.soundSystem.stressHeartbeat();
+          ui.events.emit("show-message", "HURRY UP!", "#f39c12");
+        }
 
-    this.timerSystem.start();
+        if (type === "expired") this.failLevel();
+      });
+
+      this.timerSystem.start();
+    }
 
     this.time.delayedCall(0, () => {
       const ui = this.scene.get("UIScene");
       if (ui) {
-        ui.events.emit("update-timer", levelCfg.timeLimit);
+        if (levelCfg.timeLimit === null) {
+          ui.events.emit("hide-timer");   // tutorial: hide timer entirely
+        } else {
+          ui.events.emit("update-timer", levelCfg.timeLimit);
+        }
         ui.events.emit("update-score", 0);
         ui.events.emit("update-stage", 0);
       }
@@ -117,7 +121,11 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
 
-    this.sound.play("bgmusic", { loop: true, volume: 0.4 });
+    // Music — tutorial uses menu track, timed levels use the level track
+    const track = levelCfg.music === "menu" ? "menumusic" : "bgmusic";
+    if (!this.sound.get(track)?.isPlaying) {
+      this.sound.play(track, { loop: true, volume: 0.4 });
+    }
   }
 
   private eatFood(food: Food) {
@@ -166,11 +174,16 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private stopLevelMusic() {
+    this.sound.stopByKey("bgmusic");
+    this.sound.stopByKey("menumusic");
+  }
+
   private completeLevel() {
     if (this.levelComplete || this.gameOver) return;
     this.levelComplete = true;
-    this.timerSystem.pause();
-    this.sound.stopByKey("bgmusic");
+    this.timerSystem?.pause();
+    this.stopLevelMusic();
     this.soundSystem.levelComplete();
 
     const ui = this.scene.get("UIScene");
@@ -186,7 +199,7 @@ export class GameScene extends Phaser.Scene {
   private failLevel() {
     if (this.levelComplete || this.gameOver) return;
     this.gameOver = true;
-    this.sound.stopByKey("bgmusic");
+    this.stopLevelMusic();
     this.soundSystem.levelFail();
 
     const ui = this.scene.get("UIScene");
@@ -203,11 +216,11 @@ export class GameScene extends Phaser.Scene {
   private togglePause() {
     if (this.physics.world.isPaused) {
       this.physics.resume();
-      this.timerSystem.resume();
+      this.timerSystem?.resume();
       this.sound.resumeAll();
     } else {
       this.physics.pause();
-      this.timerSystem.pause();
+      this.timerSystem?.pause();
       this.sound.pauseAll();
     }
   }
@@ -216,7 +229,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameOver || this.levelComplete) return;
 
     this.blob.update(this.cursors, delta);
-    this.timerSystem.update();
+    this.timerSystem?.update();
 
     // Jump sound — fires on the frame Bob leaves the ground moving upward
     const onGround = this.blob.physics.onGround;
@@ -253,6 +266,7 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.sizeSystem?.destroy();
     this.sound.stopByKey("bgmusic");
+    this.stopLevelMusic();
     this.soundSystem?.destroy();
     this.foods.forEach((f) => f.destroy());
     this.foods = [];

@@ -3,6 +3,7 @@ import { GAME_WIDTH, SIZE_STAGES, SHRINK_COOLDOWN_MS } from "../config/constants
 
 export class UIScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
+  private timerHidden = false;
   private scoreText!: Phaser.GameObjects.Text;
   private stageDots: Phaser.GameObjects.Image[] = [];
   private cooldownArc!: Phaser.GameObjects.Graphics;
@@ -13,8 +14,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    // ── Reset mutable arrays/refs so restarts don't accumulate stale objects ──
-    this.stageDots = [];
+    // ── Reset mutable state so restarts don't carry over stale values ──────────
+    this.stageDots  = [];
+    this.timerHidden = false;
 
     const pad = 16;
 
@@ -64,9 +66,17 @@ export class UIScene extends Phaser.Scene {
     this.events.on("update-stage",    (s: number)               => this.setStage(s));
     this.events.on("update-cooldown", (p: number)               => this.setCooldown(p));
     this.events.on("show-message",    (m: string, c?: string)   => this.showMessage(m, c));
+    // Tutorial levels have no timer — hide the display completely
+    this.events.on("hide-timer",      ()                        => this.hideTimer());
+  }
+
+  private hideTimer() {
+    this.timerHidden = true;
+    this.timerText.setVisible(false);
   }
 
   private setTimer(remaining: number) {
+    if (this.timerHidden) return;
     const mins = Math.floor(remaining / 60);
     const secs = Math.floor(remaining % 60);
     this.timerText.setText(`${mins}:${secs.toString().padStart(2, "0")}`);
