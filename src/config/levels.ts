@@ -54,6 +54,8 @@ export const LEVELS: LevelConfig[] = [
     foods: [
       // Section 1 (x=32-490): one healthy food, Bob grows to stage 1
       { x: 280,  y: 500, type: "apple"      }, // +1 → stage 1
+      // On top of the narrow duct ceiling slab (top surface y=453) — bonus for precise jump
+      { x: 620,  y: 429, type: "watermelon" }, // +1 → extra stage for skilled players
       // Section 2 (x=750-900): 150px gap between ducts — small Bob can jump between platform tops
       { x: 820,  y: 500, type: "strawberry" }, // +1 → stage 2
       // Section 3 (x=1230-1568): after medium duct
