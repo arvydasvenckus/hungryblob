@@ -24,9 +24,9 @@ export function getFoodGrowth(type: FoodType): 1 | 2 {
   return HEALTHY_SET.has(type) ? 1 : 2;
 }
 
-/** Healthy = 100 pts, Unhealthy = 200 pts */
+/** Healthy = 50 pts, Unhealthy = 100 pts */
 export function getFoodScore(type: FoodType): number {
-  return HEALTHY_SET.has(type) ? 100 : 200;
+  return HEALTHY_SET.has(type) ? 50 : 100;
 }
 
 export interface FoodSpawn {
@@ -41,6 +41,8 @@ export interface LevelConfig {
   timeLimit: number | null;
   /** which music track to play during this level */
   music: "menu" | "level";
+  /** minimum score required before the exit unlocks (0 = no requirement) */
+  scoreThreshold: number;
   foods: FoodSpawn[];
   playerStart: { x: number; y: number };
   name: string;
@@ -50,8 +52,9 @@ export const LEVELS: LevelConfig[] = [
   // ── Index 0: Tutorial ─────────────────────────────────────────────────────
   {
     key: "tutorial",
-    timeLimit: null,   // no timer — take your time
-    music: "menu",     // familiar menu music keeps the mood gentle
+    timeLimit: null,
+    music: "menu",
+    scoreThreshold: 0,
     name: "Tutorial",
     playerStart: { x: 80, y: 514 },
     // RULE: food is ONLY in open sections — never inside a duct.
@@ -73,8 +76,9 @@ export const LEVELS: LevelConfig[] = [
   // ── Index 1: Level 1 — "The Squeeze" ──────────────────────────────────────
   {
     key: "level1",
-    timeLimit: 65,     // tight — efficient run ~40s, punishing for greedy eating
+    timeLimit: 59,     // tight — reduced by 6s for extra pressure
     music: "level",
+    scoreThreshold: 300, // exit locked until 300 pts collected
     name: "The Squeeze",
     playerStart: { x: 80, y: 514 },
     // Open sections:

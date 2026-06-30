@@ -23,6 +23,8 @@ export class GameScene extends Phaser.Scene {
   private levelComplete = false;
   private stressTriggered = false;
   private blobWasOnGround = true;
+  private lockLabel: Phaser.GameObjects.Text | null = null;
+  private exitLocked = false;
 
   constructor() { super({ key: "GameScene" }); }
 
@@ -34,6 +36,8 @@ export class GameScene extends Phaser.Scene {
     this.stressTriggered = false;
     this.foods = [];
     this.timerSystem = null;
+    this.lockLabel = null;
+    this.exitLocked = false;
   }
 
   create() {
@@ -114,16 +118,27 @@ export class GameScene extends Phaser.Scene {
       this.timerSystem.start();
     }
 
+    // Lock label in world space — shown above the exit door when score threshold unmet
+    if (levelCfg.scoreThreshold > 0) {
+      this.exitLocked = true;
+      this.lockLabel = this.add.text(
+        exitZone.x, exitZone.y - 48,
+        `🔒 ${levelCfg.scoreThreshold} pts`,
+        { fontSize: "16px", color: "#e74c3c", fontFamily: "monospace", stroke: "#000", strokeThickness: 3 }
+      ).setOrigin(0.5).setDepth(5);
+    }
+
     this.time.delayedCall(0, () => {
       const ui = this.scene.get("UIScene");
       if (ui) {
         if (levelCfg.timeLimit === null) {
-          ui.events.emit("hide-timer");   // tutorial: hide timer entirely
+          ui.events.emit("hide-timer");
         } else {
           ui.events.emit("update-timer", levelCfg.timeLimit);
         }
         ui.events.emit("update-score", 0);
         ui.events.emit("update-stage", 0);
+        ui.events.emit("set-score-threshold", levelCfg.scoreThreshold);
       }
     });
 
@@ -172,6 +187,17 @@ export class GameScene extends Phaser.Scene {
     this.score += pts;
     const ui = this.scene.get("UIScene");
     ui.events.emit("update-score", this.score);
+
+    // Check if exit just unlocked
+    const threshold = LEVELS[this.levelIndex].scoreThreshold;
+    if (this.exitLocked && threshold > 0 && this.score >= threshold) {
+      this.exitLocked = false;
+      if (this.lockLabel) {
+        this.lockLabel.setText("✓ EXIT").setColor("#6fdc8c");
+        this.time.delayedCall(1200, () => this.lockLabel?.setVisible(false));
+      }
+      ui.events.emit("exit-unlocked");
+    }
 
     const popColor = category === "healthy" ? "#6fdc8c" : "#f39c12";
     const popText  = category === "healthy" ? `+${pts}` : `+${pts} ×2!`;
@@ -279,7 +305,13 @@ export class GameScene extends Phaser.Scene {
     if (!this.levelComplete) {
       const eb = this.exitZone.body as Phaser.Physics.Arcade.StaticBody;
       if (this.blob.physics.overlapsRect(eb.x, eb.y, eb.width, eb.height)) {
-        this.completeLevel();
+        if (this.exitLocked) {
+          const needed = LEVELS[this.levelIndex].scoreThreshold - this.score;
+          const ui = this.scene.get("UIScene");
+          ui.events.emit("show-message", `Need ${needed} more pts!`, "#e74c3c");
+        } else {
+          this.completeLevel();
+        }
       }
     }
 

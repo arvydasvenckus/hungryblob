@@ -5,6 +5,8 @@ export class UIScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private timerHidden = false;
   private scoreText!: Phaser.GameObjects.Text;
+  private scoreThreshold = 0;
+  private goalText!: Phaser.GameObjects.Text;
   private stageDots: Phaser.GameObjects.Image[] = [];
   private cooldownArc!: Phaser.GameObjects.Graphics;
   private messageText!: Phaser.GameObjects.Text;
@@ -14,8 +16,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    this.stageDots  = [];
-    this.timerHidden = false;
+    this.stageDots      = [];
+    this.timerHidden    = false;
+    this.scoreThreshold = 0;
 
     const pad = 32; // was 16 — scaled 2×
 
@@ -36,6 +39,15 @@ export class UIScene extends Phaser.Scene {
       stroke: "#000000",
       strokeThickness: 5,
     });
+
+    // Goal indicator — shown below score when a score threshold exists
+    this.goalText = this.add.text(pad, pad + 52, "", {
+      fontSize: "26px",
+      color: "#e74c3c",
+      fontFamily: "monospace",
+      stroke: "#000000",
+      strokeThickness: 3,
+    }).setVisible(false);
 
     // Size stage indicator (top right)
     const dotSpacing = 44;
@@ -60,12 +72,14 @@ export class UIScene extends Phaser.Scene {
       align: "center",
     }).setOrigin(0.5).setDepth(10).setVisible(false);
 
-    this.events.on("update-timer",    (r: number)               => this.setTimer(r));
-    this.events.on("update-score",    (s: number)               => this.setScore(s));
-    this.events.on("update-stage",    (s: number)               => this.setStage(s));
-    this.events.on("update-cooldown", (p: number)               => this.setCooldown(p));
-    this.events.on("show-message",    (m: string, c?: string)   => this.showMessage(m, c));
-    this.events.on("hide-timer",      ()                        => this.hideTimer());
+    this.events.on("update-timer",       (r: number)             => this.setTimer(r));
+    this.events.on("update-score",       (s: number)             => this.setScore(s));
+    this.events.on("update-stage",       (s: number)             => this.setStage(s));
+    this.events.on("update-cooldown",    (p: number)             => this.setCooldown(p));
+    this.events.on("show-message",       (m: string, c?: string) => this.showMessage(m, c));
+    this.events.on("hide-timer",         ()                      => this.hideTimer());
+    this.events.on("set-score-threshold",(t: number)             => this.setGoal(t));
+    this.events.on("exit-unlocked",      ()                      => this.onExitUnlocked());
   }
 
   private hideTimer() {
@@ -81,8 +95,28 @@ export class UIScene extends Phaser.Scene {
     this.timerText.setColor(remaining < 15 ? "#e74c3c" : "#ffffff");
   }
 
+  private setGoal(threshold: number) {
+    this.scoreThreshold = threshold;
+    if (threshold > 0) {
+      this.goalText.setText(`🔒 GOAL: ${threshold}`).setVisible(true);
+    }
+  }
+
+  private onExitUnlocked() {
+    this.goalText.setText("✓ EXIT OPEN").setColor("#6fdc8c");
+    this.time.delayedCall(2000, () => {
+      if (this.goalText?.active) this.goalText.setVisible(false);
+    });
+  }
+
   private setScore(score: number) {
     this.scoreText.setText(`Score: ${score}`);
+    // Update goal indicator colour as score approaches threshold
+    if (this.scoreThreshold > 0 && score < this.scoreThreshold) {
+      const pct = score / this.scoreThreshold;
+      const color = pct >= 0.66 ? "#f39c12" : "#e74c3c";
+      this.goalText.setText(`🔒 GOAL: ${this.scoreThreshold - score} left`).setColor(color);
+    }
   }
 
   private setStage(stage: number) {
