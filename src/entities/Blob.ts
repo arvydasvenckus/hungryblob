@@ -31,8 +31,9 @@ export class Blob {
     this.physics = new BlobPhysics(cx, cy, s0.width, s0.height);
 
     // Plain sprite — no physics body. Camera + tweens target this.
+    // Scale is always 1: the texture's blob drawing already matches hitbox dimensions.
     this.visual = scene.add.sprite(cx, cy, "blob_stage0", 0);
-    this.visual.setScale(s0.scale);
+    this.visual.setScale(1);
     this.visual.play("blob_idle_0");
 
     sizeSystem.onSizeChange((evt) => {
@@ -49,24 +50,27 @@ export class Blob {
 
   private applyStage(stage: StageIndex) {
     this.stage = stage;
-    const { scale, width, height } = SIZE_STAGES[stage];
+    const { width, height } = SIZE_STAGES[stage];
 
     this.physics.resize(width, height); // keeps body.bottom constant — trivially correct
-    this.visual.setScale(scale);
+    // Always scale 1: the blob drawing in the texture already matches the hitbox
+    // dimensions at scale 1. Using any other scale makes the visual larger than
+    // the hitbox, causing visible ceiling/floor pass-through.
+    this.visual.setScale(1);
 
     if (!this.isEating) this.refreshAnim();
 
-    // X-only squash bounce (never touch scaleY — visual only)
+    // X-only squash bounce (visual only)
     this.scene.tweens.killTweensOf(this.visual);
     this.scene.tweens.add({
       targets: this.visual,
-      scaleX: scale * 1.32,
+      scaleX: 1.32,
       duration: 80,
       ease: "Back.Out",
       onComplete: () => {
         this.scene.tweens.add({
           targets: this.visual,
-          scaleX: scale,
+          scaleX: 1,
           duration: 140,
           ease: "Elastic.Out",
         });
@@ -80,20 +84,18 @@ export class Blob {
     if (this.isBurping) return;
     this.isBurping = true;
 
-    const oldScale = SIZE_STAGES[this.stage].scale;
-
     this.scene.tweens.killTweensOf(this.visual);
-    // Phase 1: puff wide
+    // Phase 1: puff wide (relative to scale 1)
     this.scene.tweens.add({
       targets: this.visual,
-      scaleX: oldScale * 1.45,
+      scaleX: 1.45,
       duration: 100,
       ease: "Sine.Out",
       onComplete: () => {
         // Phase 2: compress
         this.scene.tweens.add({
           targets: this.visual,
-          scaleX: oldScale * 0.72,
+          scaleX: 0.72,
           duration: 90,
           ease: "Sine.In",
           onComplete: () => {
@@ -103,20 +105,20 @@ export class Blob {
 
             this.visual.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
               // Phase 4: resize + bounce
-              const { scale, width, height } = SIZE_STAGES[newStage];
+              const { width, height } = SIZE_STAGES[newStage];
               this.stage = newStage;
               this.physics.resize(width, height); // pure arithmetic, always correct
-              this.visual.setScale(scale);
+              this.visual.setScale(1);
 
               this.scene.tweens.add({
                 targets: this.visual,
-                scaleX: scale * 1.3,
+                scaleX: 1.3,
                 duration: 70,
                 ease: "Back.Out",
                 onComplete: () => {
                   this.scene.tweens.add({
                     targets: this.visual,
-                    scaleX: scale,
+                    scaleX: 1,
                     duration: SHRINK_TWEEN_MS,
                     ease: "Elastic.Out",
                     onComplete: () => {
@@ -211,17 +213,8 @@ export class Blob {
 
     this.physics.update(delta / 1000, GRAVITY, LEVEL_WIDTH, LEVEL_HEIGHT);
 
-    // Align the visual so the blob's drawn bottom matches the physics body bottom.
-    //
-    // The blob sprite is drawn centred in an 80px cell and displayed at scale S.
-    //   blob visual bottom = sprite.y + bh × S / 2
-    // We want that to equal physics.bottom = physics.cy + bh/2.
-    // Solving: sprite.y = physics.cy + bh × (1 − S) / 2
-    // At S=1.0 the offset is zero; at S>1 the sprite shifts up so the visual
-    // bottom stays flush with the floor rather than sinking through it.
-    const { scale } = SIZE_STAGES[this.stage];
-    const visualY = this.physics.cy + this.physics.bh * (1 - scale) / 2;
-    this.visual.setPosition(this.physics.cx, visualY);
+    // Visual is always scale 1 → blob drawn size = hitbox size → centres match.
+    this.visual.setPosition(this.physics.cx, this.physics.cy);
 
     // Animation state machine
     if (this.isEating || this.isBurping) return;
