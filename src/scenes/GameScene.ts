@@ -130,11 +130,12 @@ export class GameScene extends Phaser.Scene {
             this.scene.get("UIScene")?.events.emit("show-ring-hint");
           });
         }
-        if (this.levelIndex === 0 && evt.stage === 3 && !this.tutShown.has("mash")
-            && this.tutShown.has("grew1")) {
-          // Bob just ate the burger — invite them to try the mash mechanic
-          this.showTutHint("mash", 600);
-          this.scene.get("UIScene")?.events.emit("show-mash-label");
+        if (this.levelIndex === 0 && evt.stage === 2 && !this.tutShown.has("mash")) {
+          // Bob just ate the burger (stage 0 + 2 = 2) — invite mash mechanic via UIScene
+          this.tutShown.add("mash");
+          this.time.delayedCall(600, () => {
+            this.scene.get("UIScene")?.events.emit("show-mash-hint");
+          });
         }
       }
     });
@@ -166,7 +167,7 @@ export class GameScene extends Phaser.Scene {
       // Two-line label: big lock icon + score requirement clearly visible
       this.lockLabel = this.add.text(
         exitZone.x, exitZone.y - 96,
-        `locked.\n${levelCfg.scoreThreshold} pts needed.`,
+        `locked.\n${levelCfg.scoreThreshold} points needed.`,
         { fontSize: "18px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 4, align: "center" }
       ).setOrigin(0.5).setDepth(5);
     }
@@ -429,7 +430,7 @@ export class GameScene extends Phaser.Scene {
     add("grew1", 870,  FLOOR -  80, "too big for that gap.");
     add("grew2", 870,  FLOOR - 118, "wait it out Bob – Bob digests on his own.");
     // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
-    add("mash",  1240, FLOOR - 100, "try hammering Z and X – speeds up digestion.", "#d4c5a9");
+    // "mash" hint lives in UIScene (screen-space, near the soda cup)
     add("junk",  1200, FLOOR - 120, "junk food: double points means double growth!\neat wisely.", "#ff6b9d");
     // tunnel hint removed — let players discover the entry themselves
     add("goback",2200, FLOOR - 100, "need more points.\ngo back and eat a bit more.");
@@ -477,10 +478,10 @@ export class GameScene extends Phaser.Scene {
       this.hideTutHint("junk");
     }
 
-    // Zone 4: mash hint hide — once Bob has burped down below stage 3
-    if (shown.has("mash") && !shown.has("mash-hide") && this.sizeSystem.getStage() < 3) {
+    // Zone 4: mash hint hide — once Bob has burped back below stage 2
+    if (shown.has("mash") && !shown.has("mash-hide") && this.sizeSystem.getStage() < 2) {
       shown.add("mash-hide");
-      this.hideTutHint("mash");
+      this.scene.get("UIScene")?.events.emit("hide-mash-hint");
     }
 
     // Zone 5: go-back hint — show ~350px before the exit (x≈2304)

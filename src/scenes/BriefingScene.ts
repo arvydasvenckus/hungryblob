@@ -87,7 +87,7 @@ export class BriefingScene extends Phaser.Scene {
     btn.on("pointerup",    () => go(() => this.startLevel(targetLevel)));
     btn.on("pointerdown",  () => go(() => this.startLevel(targetLevel)));
     this.input.keyboard!.on("keydown-ENTER", () => go(() => this.startLevel(targetLevel)));
-    this.input.keyboard!.on("keydown-G",     () => go(() => this.startLevel(targetLevel)));
+    this.input.keyboard!.on("keydown-ESC",   () => { this.sound.stopByKey("menumusic"); this.scene.start("MenuScene"); });
 
     this.tweens.add({
       targets: btn, alpha: 0.45, duration: 650, ease: "Sine.InOut", yoyo: true, repeat: -1,

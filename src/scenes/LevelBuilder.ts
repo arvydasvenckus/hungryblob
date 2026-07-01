@@ -287,11 +287,10 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   //
   // Staircase descends: high → mid → floor
   // Step A: bridge from high (y=340) to mid (y=420) zone
-  wall2(1500, 380, 140, T2, true);   // intermediate step y=380 (high→mid bridge)
-  wall2(1640, 436, 120, T2, true);   // step down toward floor y=436
-  // Vertical wall — stages 0–2 pass (stepping platform at y=436)
-  // Widened from 75px to 82px: stage 2 (66px) now has 16px clearance instead of 6px.
-  vertWall(1760, 354, 436);           // gap: y=354–436 = 82px
+  wall2(1500, 380, 100, T2, true);   // STEP-A shortened to 100px → 40px gap before STEP-B
+  wall2(1640, 436, 120, T2, true);   // STEP-B: step down toward floor y=436
+  // Vertical wall with GAP_B gap — stages 0–2 pass (stepping platform at y=436)
+  vertWall(1760, 361, 436);           // gap: y=361–436 = 75px
   // (Bob drops from x=1760 right side back to floor)
 
   // ── Zone 6 (x=1900–2200): GAP_C floor duct (stages 0–3) ──────────────────

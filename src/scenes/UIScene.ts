@@ -70,7 +70,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     // ── Score (top left) ───────────────────────────────────────────────────
-    this.scoreText = this.add.text(pad, pad, "Score: 0", {
+    this.scoreText = this.add.text(pad, pad, "points: 0", {
       fontSize: "40px", color: "#f1c40f", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
     });
@@ -90,12 +90,13 @@ export class UIScene extends Phaser.Scene {
     [this.mashHintX, this.mashLabelX] = this.makeKeyHint(VESSEL_CX + 22, hintY, "X");
     this.mashBaseY = hintY;
 
-    // Permanent "mash Z/X" reminder — shown once the mash tutorial hint fires
-    this.mashReminderLabel = this.add.text(VESSEL_CX, DOCK_TOP + 22, "mash Z/X", {
-      fontSize: "18px", color: "#c9956a",
-      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-      stroke: "#000", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(4).setAlpha(0);
+    // Tutorial mash hint — shown near the soda cup after Bob eats the burger
+    this.mashReminderLabel = this.add.text(VESSEL_CX, DOCK_TOP - 70,
+      "try mashing Z and X rapidly.\ndigestion speeds up.", {
+        fontSize: "20px", color: "#d4c5a9",
+        fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+        stroke: "#000", strokeThickness: 3, align: "center",
+      }).setOrigin(0.5, 1).setDepth(8).setAlpha(0);
 
     // ── Message overlay ────────────────────────────────────────────────────
     this.messageText = this.add.text(GAME_WIDTH / 2, 520, "", {
@@ -113,8 +114,11 @@ export class UIScene extends Phaser.Scene {
     this.events.on("update-timer",       (r: number)             => this.setTimer(r));
     this.events.on("update-score",       (s: number)             => this.setScore(s));
     this.events.on("update-cooldown",    (p: number)             => this.onCooldownUpdate(p));
-    this.events.on("show-mash-label",    ()                      => {
+    this.events.on("show-mash-hint",     ()                      => {
       this.tweens.add({ targets: this.mashReminderLabel, alpha: 1, duration: 400 });
+    });
+    this.events.on("hide-mash-hint",     ()                      => {
+      this.tweens.add({ targets: this.mashReminderLabel, alpha: 0, duration: 400 });
     });
     this.events.on("burp-mash",          (key: "Z" | "X")       => this.onMash(key));
     this.events.on("show-message",       (m: string, c?: string) => this.showMessage(m, c));
@@ -337,7 +341,7 @@ export class UIScene extends Phaser.Scene {
   private setGoal(threshold: number) {
     this.scoreThreshold = threshold;
     if (threshold > 0) {
-      this.goalText.setText(`🔒 GOAL: ${threshold}`).setVisible(true);
+      this.goalText.setText(`🔒 goal: ${threshold}`).setVisible(true);
     }
   }
 
@@ -346,11 +350,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private setScore(score: number) {
-    this.scoreText.setText(`Score: ${score}`);
+    this.scoreText.setText(`points: ${score}`);
     if (this.scoreThreshold > 0 && score < this.scoreThreshold) {
       const pct   = score / this.scoreThreshold;
       const color = pct >= 0.66 ? "#f39c12" : "#c9956a";
-      this.goalText.setText(`🔒 GOAL: ${this.scoreThreshold - score} left`).setColor(color);
+      this.goalText.setText(`🔒 goal: ${this.scoreThreshold - score} left`).setColor(color);
     }
   }
 
