@@ -14,6 +14,16 @@ export class ResultScene extends Phaser.Scene {
     const hasNextLevel = win && level + 1 < LEVELS.length;
     const isTutorial   = level === 0;
 
+    // Persist progress: next time the player opens the menu, resume from the
+    // unlocked level (the one AFTER the level just completed, capped at last level).
+    if (win) {
+      const unlocked = Math.min(level + 1, LEVELS.length - 1);
+      const current  = parseInt(localStorage.getItem("hungryBob_unlockedLevel") ?? "0", 10);
+      if (unlocked > (isNaN(current) ? 0 : current)) {
+        localStorage.setItem("hungryBob_unlockedLevel", String(unlocked));
+      }
+    }
+
     const bg = this.add.graphics();
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); // was hardcoded 540

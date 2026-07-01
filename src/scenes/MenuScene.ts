@@ -69,8 +69,12 @@ export class MenuScene extends Phaser.Scene {
       fontSize: "26px", color: "#f39c12", fontFamily: "monospace",
     }).setOrigin(0.5);
 
-    // Play button
-    const btn = this.add.text(GAME_WIDTH / 2, 960, "[ PRESS ENTER TO PLAY ]", {
+    // Play / Continue button — label reflects saved progress
+    const startLevel = this.getSavedLevel();
+    const btnLabel = startLevel === 0
+      ? "[ ENTER ] PLAY"
+      : `[ ENTER ] CONTINUE → Level ${startLevel}`;
+    const btn = this.add.text(GAME_WIDTH / 2, 960, btnLabel, {
       fontSize: "48px",
       color: "#6fdc8c",
       fontFamily: "monospace",
@@ -90,8 +94,15 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
+  /** Returns the level index the player should resume from. */
+  private getSavedLevel(): number {
+    const raw = localStorage.getItem("hungryBob_unlockedLevel");
+    const saved = raw !== null ? parseInt(raw, 10) : 0;
+    return isNaN(saved) ? 0 : saved;
+  }
+
   private startGame() {
     this.sound.stopByKey("menumusic");
-    this.scene.start("GameScene", { level: 0 });
+    this.scene.start("GameScene", { level: this.getSavedLevel() });
   }
 }
