@@ -28,7 +28,7 @@ export class ResultScene extends Phaser.Scene {
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT); // was hardcoded 540
 
-    const title      = win ? (isTutorial ? "WELL DONE, BOB!" : "GREAT JOB, BOB!") : "OH NO, BOB...";
+    const title      = win ? (isTutorial ? "well done, bob." : "great job, bob.") : "oh no, bob.";
     const titleColor = win ? "#6fdc8c" : "#a0a0a0";
 
     this.add.text(GAME_WIDTH / 2, 180, title, {
@@ -39,7 +39,7 @@ export class ResultScene extends Phaser.Scene {
       strokeThickness: 8,
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 340, `SCORE: ${score}`, {
+    this.add.text(GAME_WIDTH / 2, 340, `score: ${score}`, {
       fontSize: "72px",
       color: "#f1c40f",
       fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -60,7 +60,7 @@ export class ResultScene extends Phaser.Scene {
 
       // Perfect run praise — sits between score and stars
       if (stars === 3) {
-        this.add.text(GAME_WIDTH / 2, 400, "PERFECT RUN!", {
+        this.add.text(GAME_WIDTH / 2, 400, "perfect run.", {
           fontSize: "38px",
           color: "#f1c40f",
           fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -108,7 +108,7 @@ export class ResultScene extends Phaser.Scene {
     if (hasNextLevel) {
       const nextName = LEVELS[level + 1].name;
       const next = this.add.text(GAME_WIDTH / 2, 800,
-        `[ N ] Next Level: ${nextName}`, {
+        `[ N ] Next level: ${nextName}`, {
           fontSize: "48px",
           color: "#6fdc8c",
           fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -122,7 +122,7 @@ export class ResultScene extends Phaser.Scene {
       this.input.keyboard!.on("keydown-ENTER", () => go(() => this.goNext()));
       this.tweens.add({ targets: next, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
     } else {
-      const retry = this.add.text(GAME_WIDTH / 2, 800, "[ ENTER ] Try Again", {
+      const retry = this.add.text(GAME_WIDTH / 2, 800, "[ ENTER ] Try again", {
         fontSize: "44px",
         color: "#6fdc8c",
         fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -138,7 +138,7 @@ export class ResultScene extends Phaser.Scene {
 
     // ── Secondary actions ─────────────────────────────────────────────────────
     if (hasNextLevel) {
-      const again = this.add.text(GAME_WIDTH / 2, 890, "[ R ] Play Again", {
+      const again = this.add.text(GAME_WIDTH / 2, 890, "[ R ] Play again", {
         fontSize: "36px",
         color: "#718096",
         fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -148,7 +148,7 @@ export class ResultScene extends Phaser.Scene {
       this.input.keyboard!.on("keydown-R", () => go(() => this.restart()));
     }
 
-    const menu = this.add.text(GAME_WIDTH / 2, hasNextLevel ? 950 : 890, "[ M ] Main Menu", {
+    const menu = this.add.text(GAME_WIDTH / 2, hasNextLevel ? 950 : 890, "[ M ] Main menu", {
       fontSize: "36px",
       color: "#a0aec0",
       fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,

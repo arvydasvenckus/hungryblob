@@ -39,7 +39,7 @@ export class BriefingScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Main alert
-    this.add.text(cx, 210, "REAL CHALLENGE STARTS NOW", {
+    this.add.text(cx, 210, "the real challenge.", {
       fontSize: "68px", color: "#f39c12", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 6,
     }).setOrigin(0.5);
@@ -54,7 +54,7 @@ export class BriefingScene extends Phaser.Scene {
       fontSize: "120px", color: "#e74c3c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 8,
     }).setOrigin(0.5);
-    this.add.text(cx, 510, "to get through the level", {
+    this.add.text(cx, 510, "to get through.", {
       fontSize: "32px", color: "#a0aec0", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5);
@@ -63,7 +63,7 @@ export class BriefingScene extends Phaser.Scene {
       fontSize: "80px", color: "#f1c40f", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 7,
     }).setOrigin(0.5);
-    this.add.text(cx, 705, "needed to unlock the exit", {
+    this.add.text(cx, 705, "to unlock the exit.", {
       fontSize: "32px", color: "#a0aec0", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5);
@@ -77,7 +77,7 @@ export class BriefingScene extends Phaser.Scene {
     let acting = false;
     const go = (fn: () => void) => { if (!acting) { acting = true; fn(); } };
 
-    const btn = this.add.text(cx, 875, "[ ENTER ] I'M READY", {
+    const btn = this.add.text(cx, 875, "[ ENTER ] ready.", {
       fontSize: "48px", color: "#6fdc8c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000", strokeThickness: 5,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });

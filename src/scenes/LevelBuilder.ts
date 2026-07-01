@@ -321,15 +321,6 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   const exitZone = scene.add.zone(exitX + T2 * 0.75, exitY + T2, T2 * 1.5, T2 * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Hints ─────────────────────────────────────────────────────────────────
-  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: "13px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-    stroke: "#000", strokeThickness: 2, align: "center",
-  };
-  scene.add.text(360, FLOOR2 - 68, "Squeeze! →",        { ...hs }).setOrigin(0, 0.5);
-  scene.add.text(660, FLOOR2 - 68, "Two paths! ↑ or →", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
-  scene.add.text(1060, FLOOR2 - 68, "Go high for bonus →", { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
-  scene.add.text(1910, FLOOR2 - 68, "Big squeeze →",    { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T2 * 0.75, exitY - 22, "EXIT ▼",
     { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
@@ -678,16 +669,6 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
   const exitZone = scene.add.zone(exitX + T3 * 0.75, exitY + T3, T3 * 1.5, T3 * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Hint labels ────────────────────────────────────────────────────────────
-  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: "13px", color: "#52c97a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-    stroke: "#000", strokeThickness: 2, align: "center",
-  };
-  scene.add.text(420,  FLOOR3 - 68, "Climb up →",           { ...hs }).setOrigin(0, 0.5);
-  scene.add.text(830,  FLOOR3 - 68, "Squeeze through ↗",    { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
-  scene.add.text(1310, FLOOR3 - 68, "Jump to the gap →",    { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
-  scene.add.text(1660, FLOOR3 - 68, "Tightest yet →",       { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
-  scene.add.text(2470, FLOOR3 - 68, "Step up & squeeze →",  { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T3 * 0.75, exitY - 22, "EXIT ▼",
     { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);

@@ -44,11 +44,6 @@ export class MenuScene extends Phaser.Scene {
     // Gentle float tween matching the old Bob sprite
     this.tweens.add({ targets: logo, y: 228, duration: 1400, ease: "Sine.InOut", yoyo: true, repeat: -1 });
 
-    // Controls hint
-    this.add.text(GAME_WIDTH / 2, 460, "← → move   ↑ / SPACE jump   ESC pause", {
-      fontSize: "28px", color: "#718096", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-    }).setOrigin(0.5);
-
     // ── Level selector ─────────────────────────────────────────────────────
     this.add.text(GAME_WIDTH / 2, 560, "─── SELECT LEVEL ───", {
       fontSize: "30px", color: "#4a5568", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -161,6 +156,18 @@ export class MenuScene extends Phaser.Scene {
     if (!this.sound.get("menumusic")?.isPlaying) {
       this.sound.play("menumusic", { loop: true, volume: 0.4 });
     }
+
+    // Sound nudge — bottom-right corner, gentle pulse to catch the eye
+    const soundNudge = this.add.text(GAME_WIDTH - 28, GAME_HEIGHT - 28,
+      "🔊 sounds on – trust us.", {
+        fontSize: "26px", color: "#a0aec0",
+        fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+        stroke: "#000", strokeThickness: 2,
+      }).setOrigin(1, 1);
+    this.tweens.add({
+      targets: soundNudge, alpha: 0.4,
+      duration: 1800, ease: "Sine.InOut", yoyo: true, repeat: -1,
+    });
   }
 
   /** Redraws only the border/cursor layer for all cards. */

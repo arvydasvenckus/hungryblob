@@ -127,6 +127,12 @@ export class GameScene extends Phaser.Scene {
             this.scene.get("UIScene")?.events.emit("show-ring-hint");
           });
         }
+        if (this.levelIndex === 0 && evt.stage === 3 && !this.tutShown.has("mash")
+            && this.tutShown.has("grew1")) {
+          // Bob just ate the burger — invite them to try the mash mechanic
+          this.showTutHint("mash", 600);
+          this.scene.get("UIScene")?.events.emit("show-mash-label");
+        }
       }
     });
 
@@ -375,8 +381,9 @@ export class GameScene extends Phaser.Scene {
       const eb = this.exitZone.body as Phaser.Physics.Arcade.StaticBody;
       if (this.blob.physics.overlapsRect(eb.x, eb.y, eb.width, eb.height)) {
         if (this.exitLocked) {
+          const needed = LEVELS[this.levelIndex].scoreThreshold - this.score;
           const ui = this.scene.get("UIScene");
-          ui.events.emit("show-message", "need more points.", "#c9956a");
+          ui.events.emit("show-message", `${needed} pts to go.`, "#c9956a");
         } else {
           this.completeLevel();
         }
@@ -408,7 +415,7 @@ export class GameScene extends Phaser.Scene {
     add("grew1", 870,  FLOOR -  80, "too big for that gap.");
     add("grew2", 870,  FLOOR - 118, "wait it out Bob – Bob digests on his own.");
     // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
-    add("mash",  1240, FLOOR - 100, "mash Z / X to speed up digestion.", "#d4c5a9");
+    add("mash",  1240, FLOOR - 100, "try hammering Z and X – speeds up digestion.", "#d4c5a9");
     add("junk",  1200, FLOOR - 120, "junk food: double points means double growth!\neat wisely.", "#ff6b9d");
     // tunnel hint removed — let players discover the entry themselves
     add("goback",2200, FLOOR - 100, "need more points.\ngo back and eat a bit more.");
@@ -456,13 +463,7 @@ export class GameScene extends Phaser.Scene {
       this.hideTutHint("junk");
     }
 
-    // Zone 4: mash hint — fires the SECOND time Bob gets stuck (after burger, at new barrier x=1260)
-    if (!shown.has("mash") && shown.has("grew1")
-        && bx > 1205 && bx < 1290
-        && this.sizeSystem.getStage() >= 3) {
-      this.showTutHint("mash", 500);
-      this.scene.get("UIScene")?.events.emit("show-mash-label");
-    }
+    // Zone 4: mash hint hide — once Bob has burped down below stage 3
     if (shown.has("mash") && !shown.has("mash-hide") && this.sizeSystem.getStage() < 3) {
       shown.add("mash-hide");
       this.hideTutHint("mash");
