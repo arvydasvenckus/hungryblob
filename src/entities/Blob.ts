@@ -14,13 +14,13 @@ import { LEVEL_WIDTH as DEFAULT_LEVEL_WIDTH, LEVEL_HEIGHT as DEFAULT_LEVEL_HEIGH
 export class Blob {
   /** Plain sprite — no physics body. Positioned from physics each frame. */
   readonly visual: Phaser.GameObjects.Sprite;
-  private _loggedBounds = false;
   private worldW: number;
   private worldH: number;
   /** Custom AABB physics engine — the single source of truth for position/size. */
   readonly physics: BlobPhysics;
 
   private scene: Phaser.Scene;
+  private sizeSystem!: SizeSystem; // stored so phase 4 can query current authoritative stage
   private stage: StageIndex = 0;
   private isBurping  = false;
   private isEating   = false;
@@ -36,6 +36,7 @@ export class Blob {
     worldH = DEFAULT_LEVEL_HEIGHT,
   ) {
     this.scene = scene;
+    this.sizeSystem = sizeSystem;
     this.worldW = worldW;
     this.worldH = worldH;
 
@@ -101,9 +102,6 @@ export class Blob {
     // tween/play on a destroyed sprite crashes the game.
     if (!this.visual?.active) return;
     this.isBurping = true;
-    // #region agent log
-    fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'Blob.ts:triggerBurp',message:'triggerBurp called',data:{currentStage:this.stage,newStage,visualActive:this.visual?.active,isSad:this.isSad},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     this.scene.tweens.killTweensOf(this.visual);
 
@@ -129,14 +127,17 @@ export class Blob {
             this.spawnBurpBubble();
 
             this.visual.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-              // Phase 4: physics resize, then swap texture at the old/new size ratio
-              // so the visual appears to shrink smoothly rather than snapping.
+              // Phase 4: physics resize.
+              // Use sizeSystem.getStage() as the authoritative final stage.
+              // If eat() fired during this burp, sizeSystem's stage reflects both the shrink
+              // and the eat — using newStage (captured at shrink time) would wrongly revert it.
+              const finalStage = this.sizeSystem.getStage() as StageIndex;
               const oldW = SIZE_STAGES[this.stage].width;
-              const { width, height } = SIZE_STAGES[newStage];
-              this.stage = newStage;
+              const { width, height } = SIZE_STAGES[finalStage];
+              this.stage = finalStage;
               this.physics.resize(width, height);
               const scaleRatio = oldW / width;
-              this.visual.play(`blob_idle_${newStage}`, true);
+              this.visual.play(`blob_idle_${finalStage}`, true);
               this.visual.setScale(scaleRatio);
               this.scene.tweens.add({
                 targets: this.visual,
@@ -219,7 +220,12 @@ export class Blob {
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys, delta: number) {
     if (this.isSad) return;
 
-    if (!this.isBurping) {
+    // Movement input is always processed — even during burp animation.
+    // Log evidence (vxAtBurpStart:-184) confirmed that blocking input during burp
+    // causes velocity to stay stuck. Removing the isBurping guard lets Bob
+    // start/stop movement freely. The animation state machine below still
+    // prevents walk/idle from interrupting the burp visual.
+    {
       const walkSpd = STAGE_WALK_SPEED[this.stage];
       const jumpVel = STAGE_JUMP_VELOCITY[this.stage];
 
@@ -239,9 +245,6 @@ export class Blob {
     }
 
     this.physics.update(delta / 1000, GRAVITY, this.worldW, this.worldH);
-    // #region agent log — one-shot: log world bounds used by BlobPhysics on first frame
-    if (!this._loggedBounds) { this._loggedBounds = true; fetch('http://127.0.0.1:7553/ingest/78dd097e-7875-4bca-a1cb-75d8dedeb0be',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'15718d'},body:JSON.stringify({sessionId:'15718d',location:'Blob.ts:physics-update',message:'BlobPhysics world bounds used',data:{worldW:this.worldW,worldH:this.worldH,bx:this.physics.bx,by:this.physics.by},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{}); }
-    // #endregion
 
     // Visual is always scale 1 → blob drawn size = hitbox size → centres match.
     this.visual.setPosition(this.physics.cx, this.physics.cy);
