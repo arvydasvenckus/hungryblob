@@ -3,9 +3,24 @@ import { GAME_WIDTH, GAME_HEIGHT } from "../config/constants";
 import { LEVELS } from "../config/levels";
 
 export class MenuScene extends Phaser.Scene {
+  private selectedIdx  = 0;
+  private unlockedIdxs: number[] = [];
+  private cardGfx: Phaser.GameObjects.Graphics[] = [];
+  private cardPositions: { cx: number; cy: number; w: number; h: number }[] = [];
+
   constructor() { super({ key: "MenuScene" }); }
 
   create() {
+    this.cardGfx      = [];
+    this.cardPositions = [];
+
+    const savedLevel = this.getSavedLevel();
+
+    // Start selection at the recommended (saved) level
+    this.selectedIdx  = savedLevel;
+    this.unlockedIdxs = LEVELS.map((_, i) => (i === 0 || savedLevel >= i ? i : -1))
+                               .filter(i => i >= 0);
+
     // Background
     const bg = this.add.graphics();
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1);
@@ -44,14 +59,12 @@ export class MenuScene extends Phaser.Scene {
       fontSize: "30px", color: "#4a5568", fontFamily: "monospace",
     }).setOrigin(0.5);
 
-    const savedLevel = this.getSavedLevel();
-    const CARD_W    = 300;
-    const CARD_H    = 170;
-    const CARD_GAP  = 60;
-    const cardCount = LEVELS.length;
-    const totalW    = cardCount * CARD_W + (cardCount - 1) * CARD_GAP;
+    const CARD_W     = 300;
+    const CARD_H     = 170;
+    const CARD_GAP   = 60;
+    const totalW     = LEVELS.length * CARD_W + (LEVELS.length - 1) * CARD_GAP;
     const cardStartX = (GAME_WIDTH - totalW) / 2;
-    const CARD_Y    = 690;
+    const CARD_Y     = 700;
 
     let acting = false;
     const go = (level: number) => {
@@ -61,107 +74,109 @@ export class MenuScene extends Phaser.Scene {
     };
 
     LEVELS.forEach((cfg, i) => {
-      const unlocked    = i === 0 || savedLevel >= i;
-      const recommended = i === savedLevel;
+      const unlocked = i === 0 || savedLevel >= i;
       const cx = cardStartX + i * (CARD_W + CARD_GAP);
       const cy = CARD_Y;
 
-      // Card background (graphics layer)
-      const card = this.add.graphics();
+      // Graphics layer for the border (redrawn on selection change)
+      const cardG = this.add.graphics();
+      this.cardGfx.push(cardG);
+      this.cardPositions.push({ cx, cy, w: CARD_W, h: CARD_H });
 
-      const drawCard = (hover: boolean) => {
-        card.clear();
-        if (unlocked) {
-          const fillCol = recommended ? 0x0d2a1a : 0x111827;
-          const alpha   = hover ? 0.95 : 0.85;
-          card.fillStyle(fillCol, alpha);
-          card.fillRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-          const borderCol = recommended ? 0x6fdc8c : (hover ? 0x4a7c5e : 0x2d5a3d);
-          card.lineStyle(recommended ? 4 : 2, borderCol, 1);
-          card.strokeRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-        } else {
-          card.fillStyle(0x0a0a14, 0.7);
-          card.fillRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-          card.lineStyle(2, 0x2d3748, 0.6);
-          card.strokeRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-        }
-      };
-
-      drawCard(false);
-
-      // Key number badge
-      this.add.text(cx + 18, cy + 16, `${i + 1}`, {
-        fontSize: "24px", color: unlocked ? "#6fdc8c" : "#4a5568", fontFamily: "monospace",
-        stroke: "#000", strokeThickness: 2,
-      });
+      // Static card fill (dark, doesn't change with selection)
+      const fill = this.add.graphics();
+      fill.fillStyle(unlocked ? 0x111827 : 0x0a0a14, 0.85);
+      fill.fillRoundedRect(cx, cy, CARD_W, CARD_H, 14);
 
       // Level name
-      this.add.text(cx + CARD_W / 2, cy + 60, cfg.name, {
+      this.add.text(cx + CARD_W / 2, cy + 54, cfg.name, {
         fontSize: "30px",
-        color: unlocked ? (recommended ? "#ffffff" : "#cbd5e0") : "#4a5568",
+        color: unlocked ? "#ffffff" : "#4a5568",
         fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
       }).setOrigin(0.5);
 
-      // Status label
-      const statusLabel = unlocked
-        ? (recommended ? "PLAY  ▶" : "REPLAY")
-        : "LOCKED";
-      const statusColor = unlocked
-        ? (recommended ? "#6fdc8c" : "#a0aec0")
-        : "#4a5568";
-      this.add.text(cx + CARD_W / 2, cy + 110, statusLabel, {
+      // Status
+      const statusLabel = unlocked ? (savedLevel === i ? "PLAY  ▶" : "REPLAY") : "LOCKED";
+      const statusColor = unlocked ? (savedLevel === i ? "#6fdc8c" : "#a0aec0") : "#4a5568";
+      this.add.text(cx + CARD_W / 2, cy + 108, statusLabel, {
         fontSize: "24px", color: statusColor, fontFamily: "monospace",
         stroke: "#000", strokeThickness: 2,
       }).setOrigin(0.5);
 
-      // Key hint
-      this.add.text(cx + CARD_W / 2, cy + CARD_H - 18, `Press ${i + 1}`, {
-        fontSize: "18px", color: "#4a5568", fontFamily: "monospace",
-      }).setOrigin(0.5);
-
       if (unlocked) {
-        // Transparent hit area
         const hit = this.add.rectangle(cx + CARD_W / 2, cy + CARD_H / 2, CARD_W, CARD_H, 0, 0)
           .setInteractive({ useHandCursor: true });
-        hit.on("pointerover",  () => drawCard(true));
-        hit.on("pointerout",   () => drawCard(false));
+        hit.on("pointerover",  () => { if (this.selectedIdx !== i) { this.selectedIdx = i; this.redrawBorders(); } });
         hit.on("pointerdown",  () => go(i));
-
-        // Keyboard shortcut
-        this.input.keyboard!.on(`keydown-${i + 1}`, () => go(i));
-      }
-
-      // Blinking border on recommended card
-      if (recommended) {
-        this.tweens.add({
-          targets: { v: 0 },
-          v: 1, duration: 800, yoyo: true, repeat: -1,
-          ease: "Sine.InOut",
-          onUpdate: (tween) => {
-            const v = tween.getValue() as number;
-            card.clear();
-            const fillCol = 0x0d2a1a;
-            card.fillStyle(fillCol, 0.9);
-            card.fillRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-            card.lineStyle(4, 0x6fdc8c, 0.4 + 0.6 * v);
-            card.strokeRoundedRect(cx, cy, CARD_W, CARD_H, 14);
-          },
-        });
       }
     });
 
-    // Enter key starts recommended level
-    this.input.keyboard!.on("keydown-ENTER", () => go(savedLevel));
+    // Draw initial borders
+    this.redrawBorders();
 
-    // Bottom hint
+    // Arrow key navigation (only across unlocked levels)
+    this.input.keyboard!.on("keydown-LEFT", () => {
+      const pos = this.unlockedIdxs.indexOf(this.selectedIdx);
+      if (pos > 0) {
+        this.selectedIdx = this.unlockedIdxs[pos - 1];
+        this.redrawBorders();
+      }
+    });
+
+    this.input.keyboard!.on("keydown-RIGHT", () => {
+      const pos = this.unlockedIdxs.indexOf(this.selectedIdx);
+      if (pos < this.unlockedIdxs.length - 1) {
+        this.selectedIdx = this.unlockedIdxs[pos + 1];
+        this.redrawBorders();
+      }
+    });
+
+    this.input.keyboard!.on("keydown-ENTER", () => go(this.selectedIdx));
+
+    // Navigation hint
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 50,
-      "Press ENTER to start recommended level", {
-        fontSize: "26px", color: "#4a5568", fontFamily: "monospace",
+      "← → to select   ENTER to start", {
+        fontSize: "28px", color: "#4a5568", fontFamily: "monospace",
       }).setOrigin(0.5);
 
     if (!this.sound.get("menumusic")?.isPlaying) {
       this.sound.play("menumusic", { loop: true, volume: 0.4 });
     }
+  }
+
+  /** Redraws only the border/cursor layer for all cards. */
+  private redrawBorders() {
+    this.cardGfx.forEach((g, i) => {
+      g.clear();
+      const { cx, cy, w, h } = this.cardPositions[i];
+      const unlocked = this.unlockedIdxs.includes(i);
+      const selected = i === this.selectedIdx;
+
+      if (!unlocked) {
+        // Locked: very dim static border
+        g.lineStyle(2, 0x2d3748, 0.5);
+        g.strokeRoundedRect(cx, cy, w, h, 14);
+        return;
+      }
+
+      if (selected) {
+        // Selected: thick bright green border + subtle outer glow
+        g.lineStyle(8, 0x6fdc8c, 0.25);
+        g.strokeRoundedRect(cx - 4, cy - 4, w + 8, h + 8, 18);
+        g.lineStyle(4, 0x6fdc8c, 1);
+        g.strokeRoundedRect(cx, cy, w, h, 14);
+
+        // Small triangle cursor above selected card
+        const tip = cx + w / 2;
+        const ty  = cy - 18;
+        g.fillStyle(0x6fdc8c, 1);
+        g.fillTriangle(tip - 14, ty, tip + 14, ty, tip, ty + 16);
+      } else {
+        // Unlocked but not selected: dim border
+        g.lineStyle(2, 0x2d5a3d, 0.7);
+        g.strokeRoundedRect(cx, cy, w, h, 14);
+      }
+    });
   }
 
   private getSavedLevel(): number {
