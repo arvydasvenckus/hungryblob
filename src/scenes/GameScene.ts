@@ -137,10 +137,11 @@ export class GameScene extends Phaser.Scene {
     // Lock label in world space — shown above the exit door when score threshold unmet
     if (levelCfg.scoreThreshold > 0) {
       this.exitLocked = true;
+      // Two-line label: big lock icon + score requirement clearly visible
       this.lockLabel = this.add.text(
-        exitZone.x, exitZone.y - 48,
-        `🔒 ${levelCfg.scoreThreshold} pts`,
-        { fontSize: "16px", color: "#e74c3c", fontFamily: "monospace", stroke: "#000", strokeThickness: 3 }
+        exitZone.x, exitZone.y - 56,
+        `🔒 LOCKED\n${levelCfg.scoreThreshold} pts needed`,
+        { fontSize: "18px", color: "#e74c3c", fontFamily: "monospace", stroke: "#000", strokeThickness: 4, align: "center" }
       ).setOrigin(0.5).setDepth(5);
     }
 
@@ -358,7 +359,7 @@ export class GameScene extends Phaser.Scene {
     // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
     add("junk",  1200, FLOOR - 120, "▼  JUNK FOOD — 2× points but 2× growth!\nEat wisely.", "#ff6b9d");
     // tunnel hint removed — let players discover the entry themselves
-    add("goback",2200, FLOOR - 100, "Not enough points?\nGo back — jump up at the L-section! ←");
+    add("goback",2200, FLOOR - 100, "Not enough points?\n← Go back and find the watermelon!");
   }
 
   private showTutHint(key: string, delayMs = 0) {
