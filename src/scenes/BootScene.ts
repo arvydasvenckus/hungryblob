@@ -7,6 +7,8 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.load.image("vinted-logo",      "images/vinted-logo.png");
     this.load.image("hungry-bob-logo",  "images/hungry-bob-logo.png");
+    this.load.image("star-full",        "images/star-full.png");
+    this.load.image("star-empty",       "images/star-empty.png");
     this.load.audio("bgmusic",   "music/the-show-must-be-go.mp3");
     this.load.audio("menumusic", "music/fluffing-a-duck.mp3");
     // Burps — stage-specific recordings (6 files cover 8 stages)

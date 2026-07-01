@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT, SIZE_STAGES, SHRINK_COOLDOWN_MS } from "../config/constants";
+import { GAME_WIDTH, GAME_HEIGHT, SHRINK_COOLDOWN_MS } from "../config/constants";
 
 
 // ─── Dock layout constants ───────────────────────────────────────────────────
@@ -8,22 +8,13 @@ const DOCK_BOTTOM  = GAME_HEIGHT - 12;      // 1068
 const DOCK_TOP     = DOCK_BOTTOM - DOCK_H;  // 972
 const DOCK_CY      = DOCK_TOP + DOCK_H / 2; // 1020
 
-const ICON_SIZE    = 52;
-const ICON_GAP     = 12;
-const STAGE_COUNT  = SIZE_STAGES.length;
-const STAGE_W      = STAGE_COUNT * ICON_SIZE + (STAGE_COUNT - 1) * ICON_GAP; // 500
 const DOCK_PAD     = 24;
 const VESSEL_W     = 60;
 const VESSEL_H     = 82;
-const SEP_GAP      = 28;
-const DOCK_W       = DOCK_PAD + STAGE_W + SEP_GAP + VESSEL_W + DOCK_PAD; // 644
+const DOCK_W       = DOCK_PAD + VESSEL_W + DOCK_PAD; // 108
 
-const DOCK_LEFT    = (GAME_WIDTH - DOCK_W) / 2;  // ~638
-const ICONS_LEFT   = DOCK_LEFT + DOCK_PAD;
-const VESSEL_CX    = DOCK_LEFT + DOCK_PAD + STAGE_W + SEP_GAP + VESSEL_W / 2;
-
-// Stage icon palette (green → yellow → orange → red → deep red)
-const STAGE_COLORS = [0x6fdc8c, 0xa4de6c, 0xf4d03f, 0xf39c12, 0xe67e22, 0xe74c3c, 0xc0392b, 0x8e0000];
+const DOCK_LEFT    = (GAME_WIDTH - DOCK_W) / 2;
+const VESSEL_CX    = DOCK_LEFT + DOCK_W / 2;
 
 // American diner palette
 const DINER_RED      = 0xc0392b;
@@ -42,9 +33,7 @@ export class UIScene extends Phaser.Scene {
 
   // Dock
   private dockBg!: Phaser.GameObjects.Graphics;
-  private stageIconGfx!: Phaser.GameObjects.Graphics;
   private vesselGfx!: Phaser.GameObjects.Graphics;
-  private currentStage = 0;
   private currentFill  = 0;  // 0 = empty (just ate), 1 = full (ready to burp)
   private activeBubbles = 0;
   private bubbleTimer!: Phaser.Time.TimerEvent;
@@ -58,13 +47,13 @@ export class UIScene extends Phaser.Scene {
   private mashBounceZ?: Phaser.Tweens.Tween;
   private mashBounceX?: Phaser.Tweens.Tween;
   private mashBaseY = 0;
+  private mashReminderLabel!: Phaser.GameObjects.Text;
 
   constructor() { super({ key: "UIScene" }); }
 
   create() {
     this.timerHidden    = false;
     this.scoreThreshold = 0;
-    this.currentStage   = 0;
     this.currentFill    = 0;
     this.activeBubbles  = 0;
 
@@ -85,7 +74,7 @@ export class UIScene extends Phaser.Scene {
 
     // ── Goal indicator ─────────────────────────────────────────────────────
     this.goalText = this.add.text(pad, pad + 52, "", {
-      fontSize: "26px", color: "#e74c3c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      fontSize: "26px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 3,
     }).setVisible(false);
 
@@ -98,6 +87,13 @@ export class UIScene extends Phaser.Scene {
     [this.mashHintX, this.mashLabelX] = this.makeKeyHint(VESSEL_CX + 22, hintY, "X");
     this.mashBaseY = hintY;
 
+    // Permanent "mash Z/X" reminder — shown once the mash tutorial hint fires
+    this.mashReminderLabel = this.add.text(VESSEL_CX, DOCK_TOP + 22, "mash Z/X", {
+      fontSize: "18px", color: "#c9956a",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      stroke: "#000", strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(4).setAlpha(0);
+
     // ── Message overlay ────────────────────────────────────────────────────
     this.messageText = this.add.text(GAME_WIDTH / 2, 520, "", {
       fontSize: "72px", color: "#ffffff", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
@@ -107,8 +103,10 @@ export class UIScene extends Phaser.Scene {
     // ── Event wiring ───────────────────────────────────────────────────────
     this.events.on("update-timer",       (r: number)             => this.setTimer(r));
     this.events.on("update-score",       (s: number)             => this.setScore(s));
-    this.events.on("update-stage",       (s: number)             => this.setStage(s));
     this.events.on("update-cooldown",    (p: number)             => this.onCooldownUpdate(p));
+    this.events.on("show-mash-label",    ()                      => {
+      this.tweens.add({ targets: this.mashReminderLabel, alpha: 1, duration: 400 });
+    });
     this.events.on("burp-mash",          (key: "Z" | "X")       => this.onMash(key));
     this.events.on("show-message",       (m: string, c?: string) => this.showMessage(m, c));
     this.events.on("hide-timer",         ()                      => this.hideTimer());
@@ -148,26 +146,12 @@ export class UIScene extends Phaser.Scene {
     bg.lineStyle(1, 0x7a5c00, 0.4);
     bg.strokeRoundedRect(DOCK_LEFT + 4, DOCK_TOP + 4, DOCK_W - 8, DOCK_H - 8, rx - 4);
 
-    // Recessed panel for stage icons
-    bg.fillStyle(0x0a0804, 0.7);
-    bg.fillRoundedRect(ICONS_LEFT - 6, DOCK_TOP + 10,
-      STAGE_W + 12, DOCK_H - 20, 8);
-
     // Recessed panel for vessel
     bg.fillStyle(0x0c0a06, 0.7);
     bg.fillRoundedRect(VESSEL_CX - VESSEL_W / 2 - 8, DOCK_TOP + 6,
       VESSEL_W + 16, DOCK_H - 12, 8);
 
-    // Vertical separator — gold trim line
-    const sepX = DOCK_LEFT + DOCK_PAD + STAGE_W + SEP_GAP / 2;
-    bg.lineStyle(2, 0xb8860b, 0.5);
-    bg.beginPath(); bg.moveTo(sepX, DOCK_TOP + 12); bg.lineTo(sepX, DOCK_BOTTOM - 12); bg.strokePath();
-
     this.dockBg = bg;
-
-    // Stage icons graphics layer
-    this.stageIconGfx = this.add.graphics().setDepth(3);
-    this.drawStageIcons(0);
 
     // Vessel graphics layer
     this.vesselGfx = this.add.graphics().setDepth(3);
@@ -180,53 +164,6 @@ export class UIScene extends Phaser.Scene {
       callback: this.spawnBubble,
       callbackScope: this,
     });
-  }
-
-  // ─── Stage icons ──────────────────────────────────────────────────────────
-
-  private drawStageIcons(stage: number) {
-    this.stageIconGfx.clear();
-
-    // Base icon size = 40px for stage 0, grows +2px per stage up to stage 7 (54px).
-    // Icons are center-aligned on DOCK_CY so they grow symmetrically.
-    const BASE_SZ = 40;
-    const SZ_STEP = 2;
-
-    for (let i = 0; i < STAGE_COUNT; i++) {
-      const sz = BASE_SZ + i * SZ_STEP;           // 40, 42, 44 … 54
-      const r  = sz * 0.32;                        // corner radius scales with size
-      const c  = STAGE_COLORS[i];
-
-      const slotCx = ICONS_LEFT + i * (BASE_SZ + SZ_STEP + ICON_GAP) + sz / 2;
-      // Center-align: top-left y so icon is centred on DOCK_CY
-      const iy = DOCK_CY - sz / 2;
-
-      if (i < stage) {
-        // Past stages: dim fill, stage-colored outline
-        this.stageIconGfx.fillStyle(c, 0.28);
-        this.stageIconGfx.fillRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
-        this.stageIconGfx.lineStyle(2, c, 0.55);
-        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
-      } else if (i === stage) {
-        // Current stage: full brightness, stage-colored border + inner glow
-        this.stageIconGfx.fillStyle(c, 1);
-        this.stageIconGfx.fillRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
-        // Inner highlight shine
-        this.stageIconGfx.fillStyle(0xffffff, 0.28);
-        this.stageIconGfx.fillEllipse(slotCx - sz * 0.1, iy + sz * 0.18, sz * 0.38, sz * 0.2);
-        // Stage-color border
-        this.stageIconGfx.lineStyle(3, c, 1);
-        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
-        // Outer glow ring (slightly larger, semi-transparent)
-        this.stageIconGfx.lineStyle(5, c, 0.28);
-        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2 - 3, iy - 3, sz + 6, sz + 6, r + 3);
-      } else {
-        // Future stages: just the outline at the per-stage color, very dim
-        this.stageIconGfx.lineStyle(2, c, 0.22);
-        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
-      }
-      // No dot indicator — removed as requested
-    }
   }
 
   // ─── Soda vessel (diner theme) ────────────────────────────────────────────
@@ -264,7 +201,7 @@ export class UIScene extends Phaser.Scene {
       const widthAtFill = botW + (topW - botW) * (fillH / usableH);
 
       // Tapered fill polygon — clockwise
-      this.vesselGfx.fillStyle(0x6d2b2b, 0.88);
+      this.vesselGfx.fillStyle(0xb84040, 0.92);
       this.vesselGfx.fillPoints([
         { x: cx - botW / 2,        y: fillBotY },
         { x: cx + botW / 2,        y: fillBotY },
@@ -390,19 +327,14 @@ export class UIScene extends Phaser.Scene {
     this.scoreText.setText(`Score: ${score}`);
     if (this.scoreThreshold > 0 && score < this.scoreThreshold) {
       const pct   = score / this.scoreThreshold;
-      const color = pct >= 0.66 ? "#f39c12" : "#e74c3c";
+      const color = pct >= 0.66 ? "#f39c12" : "#c9956a";
       this.goalText.setText(`🔒 GOAL: ${this.scoreThreshold - score} left`).setColor(color);
     }
   }
 
-  private setStage(stage: number) {
-    this.currentStage = stage;
-    this.drawStageIcons(stage);
-  }
-
   /** Wraps setCooldown and also manages mash-hint visibility. */
   private onCooldownUpdate(pct: number) {
-    const shouldShow = pct > 0.02 && this.currentStage > 0;
+    const shouldShow = pct > 0.02; // cooldown only runs when stage > 0
     if (shouldShow !== this.mashHintActive) {
       this.mashHintActive = shouldShow;
       const alpha = shouldShow ? 0.55 : 0;

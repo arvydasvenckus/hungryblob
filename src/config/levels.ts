@@ -48,6 +48,20 @@ export interface LevelConfig {
   name: string;
 }
 
+/**
+ * Returns the star rating (1–3) for a completed level.
+ *   1 star  — met the score threshold (door-unlock minimum)
+ *   2 stars — reached the midpoint between threshold and max possible score
+ *   3 stars — collected all food (max possible score)
+ */
+export function getStars(score: number, cfg: LevelConfig): 1 | 2 | 3 {
+  const maxScore   = cfg.foods.reduce((s, f) => s + getFoodScore(f.type), 0);
+  const twoStarMin = Math.ceil((cfg.scoreThreshold + maxScore) / 2);
+  if (score >= maxScore)   return 3;
+  if (score >= twoStarMin) return 2;
+  return 1;
+}
+
 export const LEVELS: LevelConfig[] = [
   // ── Index 0: Tutorial ─────────────────────────────────────────────────────
   {
@@ -125,7 +139,7 @@ export const LEVELS: LevelConfig[] = [
     timeLimit: 75,
     music: "level",
     scoreThreshold: 400,
-    name: "Sewer Depths",
+    name: "Feast Mode",
     playerStart: { x: 80, y: 514 },
     // Food rule: NEVER inside a duct or under any ceiling.
     // Open zones:

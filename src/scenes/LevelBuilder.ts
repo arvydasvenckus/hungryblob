@@ -94,6 +94,12 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   wall(900,  T,    160, 248); // upper beam — y=32 to y=280 (touches ceiling)
   wall(900,  280,  160, 215); // lower beam — y=280 to y=495 (adjacent, no air gap)
 
+  // ── SECOND BARRIER (x=1260): 56px floor gap — stages 0–1 only ────────────
+  // Player eats burger at x=1200 (becomes stage 3, 85px) → hits this wall.
+  // Must wait/mash to burp down to stage 1 (47px) or stage 0 (28px) to pass.
+  // gap=56px: stage 0 (28px) ✓, stage 1 (47px) ✓, stage 2 (66px) ✗
+  vertWall(1260, FLOOR_Y - 56, FLOOR_Y);
+
   // ── L-SECTION (L rotated 90° CW): sealed left wall, right-side entry ─────
   //
   // Shape: dead end on LEFT, entry on RIGHT (player encounters entry while going right)

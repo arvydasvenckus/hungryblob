@@ -91,18 +91,42 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // Status
-      const statusLabel = unlocked ? (savedLevel === i ? "PLAY  ▶" : "REPLAY") : "LOCKED";
+      const statusLabel = unlocked ? (savedLevel === i ? "PLAY  ▶" : "REPLAY") : "locked.";
       const statusColor = unlocked ? (savedLevel === i ? "#6fdc8c" : "#a0aec0") : "#4a5568";
-      this.add.text(cx + CARD_W / 2, cy + 108, statusLabel, {
+      const statusText = this.add.text(cx + CARD_W / 2, cy + 108, statusLabel, {
         fontSize: "24px", color: statusColor, fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
         stroke: "#000", strokeThickness: 2,
       }).setOrigin(0.5);
+
+      // Star rating (bottom-right of card, shown when unlocked and previously completed)
+      // Image source 421×389 — scale to ~24px wide: 24/421 ≈ 0.057
+      if (unlocked) {
+        const savedStars = this.getSavedStars(i);
+        if (savedStars > 0) {
+          const starScale = 0.057;
+          const starGap   = 26;
+          const starCY    = cy + CARD_H - 20;
+          const starCXStart = cx + CARD_W - 16 - starGap * 2; // right-aligned
+
+          for (let s = 0; s < 3; s++) {
+            const scx = starCXStart + s * starGap;
+            const key = s < savedStars ? "star-full" : "star-empty";
+            this.add.image(scx, starCY, key).setScale(starScale).setOrigin(0.5);
+          }
+        }
+      }
 
       if (unlocked) {
         const hit = this.add.rectangle(cx + CARD_W / 2, cy + CARD_H / 2, CARD_W, CARD_H, 0, 0)
           .setInteractive({ useHandCursor: true });
         hit.on("pointerover",  () => { if (this.selectedIdx !== i) { this.selectedIdx = i; this.redrawBorders(); } });
         hit.on("pointerdown",  () => go(i));
+      } else {
+        // Locked card: hover shows a breadcrumb hint, no click
+        const hit = this.add.rectangle(cx + CARD_W / 2, cy + CARD_H / 2, CARD_W, CARD_H, 0, 0)
+          .setInteractive({ useHandCursor: false });
+        hit.on("pointerover",  () => statusText.setText("squeeze through more to unlock.").setFontSize(18));
+        hit.on("pointerout",   () => statusText.setText("locked.").setFontSize(24));
       }
     });
 
@@ -178,6 +202,12 @@ export class MenuScene extends Phaser.Scene {
     const raw   = localStorage.getItem("hungryBob_unlockedLevel");
     const saved = raw !== null ? parseInt(raw, 10) : 0;
     return isNaN(saved) ? 0 : saved;
+  }
+
+  private getSavedStars(level: number): number {
+    const raw = localStorage.getItem(`hungryBob_stars_${level}`);
+    const n   = raw !== null ? parseInt(raw, 10) : 0;
+    return isNaN(n) ? 0 : n;
   }
 
   private startLevel(level: number) {

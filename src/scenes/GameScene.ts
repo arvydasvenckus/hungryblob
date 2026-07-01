@@ -156,9 +156,9 @@ export class GameScene extends Phaser.Scene {
       this.exitLocked = true;
       // Two-line label: big lock icon + score requirement clearly visible
       this.lockLabel = this.add.text(
-        exitZone.x, exitZone.y - 56,
-        `🔒 LOCKED\n${levelCfg.scoreThreshold} pts needed`,
-        { fontSize: "18px", color: "#e74c3c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 4, align: "center" }
+        exitZone.x, exitZone.y - 96,
+        `locked.\n${levelCfg.scoreThreshold} pts needed.`,
+        { fontSize: "18px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 4, align: "center" }
       ).setOrigin(0.5).setDepth(5);
     }
 
@@ -234,15 +234,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     const popColor = category === "healthy" ? "#6fdc8c" : "#f39c12";
-    const popText  = category === "healthy" ? `+${pts}` : `+${pts} ×2!`;
+    const popText  = category === "healthy" ? `+${pts} pts` : `+${pts} pts ×2!`;
     const { x, y } = this.blob.visual;
     const pop = this.add.text(x, y - 30, popText, {
-      fontSize: "17px", color: popColor,
+      fontSize: "26px", color: popColor,
       fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-      stroke: "#000000", strokeThickness: 2,
+      stroke: "#000000", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(5);
     this.tweens.add({
-      targets: pop, y: y - 85, alpha: 0, duration: 850,
+      targets: pop, y: y - 110, alpha: 0, duration: 1300,
       onComplete: () => pop.destroy(),
     });
   }
@@ -375,9 +375,8 @@ export class GameScene extends Phaser.Scene {
       const eb = this.exitZone.body as Phaser.Physics.Arcade.StaticBody;
       if (this.blob.physics.overlapsRect(eb.x, eb.y, eb.width, eb.height)) {
         if (this.exitLocked) {
-          const needed = LEVELS[this.levelIndex].scoreThreshold - this.score;
           const ui = this.scene.get("UIScene");
-          ui.events.emit("show-message", `Need ${needed} more pts!`, "#e74c3c");
+          ui.events.emit("show-message", "need more points.", "#c9956a");
         } else {
           this.completeLevel();
         }
@@ -405,13 +404,14 @@ export class GameScene extends Phaser.Scene {
     };
 
     add("move",  400,  FLOOR - 120, "← → Move     ↑ / SPACE Jump");
-    add("eat",   800,  FLOOR - 110, "▼  Eat this to grow!");
-    add("grew1", 870,  FLOOR -  80, "You grew! The gap is now too narrow.");
-    add("grew2", 870,  FLOOR - 118, "Stand here and wait — Bob digests automatically.");
+    add("eat",   800,  FLOOR - 110, "eat and grow.");
+    add("grew1", 870,  FLOOR -  80, "too big for that gap.");
+    add("grew2", 870,  FLOOR - 118, "wait it out Bob – Bob digests on his own.");
     // "ring" hint is now a UIScene screen-space highlight (show-ring-hint event)
-    add("junk",  1200, FLOOR - 120, "▼  JUNK FOOD — 2× points but 2× growth!\nEat wisely.", "#ff6b9d");
+    add("mash",  1240, FLOOR - 100, "mash Z / X to speed up digestion.", "#d4c5a9");
+    add("junk",  1200, FLOOR - 120, "junk food: double points means double growth!\neat wisely.", "#ff6b9d");
     // tunnel hint removed — let players discover the entry themselves
-    add("goback",2200, FLOOR - 100, "Not enough points?\n← Go back and find the watermelon!");
+    add("goback",2200, FLOOR - 100, "need more points.\ngo back and eat a bit more.");
   }
 
   private showTutHint(key: string, delayMs = 0) {
@@ -454,6 +454,18 @@ export class GameScene extends Phaser.Scene {
     if (shown.has("junk") && !shown.has("junk-hide") && bx > 1380) {
       shown.add("junk-hide");
       this.hideTutHint("junk");
+    }
+
+    // Zone 4: mash hint — fires the SECOND time Bob gets stuck (after burger, at new barrier x=1260)
+    if (!shown.has("mash") && shown.has("grew1")
+        && bx > 1205 && bx < 1290
+        && this.sizeSystem.getStage() >= 3) {
+      this.showTutHint("mash", 500);
+      this.scene.get("UIScene")?.events.emit("show-mash-label");
+    }
+    if (shown.has("mash") && !shown.has("mash-hide") && this.sizeSystem.getStage() < 3) {
+      shown.add("mash-hide");
+      this.hideTutHint("mash");
     }
 
     // Zone 5: go-back hint — show ~350px before the exit (x≈2304)
