@@ -193,8 +193,11 @@ export class Blob {
   // ─── Stress & sad ──────────────────────────────────────────────────────────
 
   setStressed(on: boolean) {
-    if (this.isStressed === on || this.isBurping || this.isSad) return;
+    if (this.isStressed === on || this.isSad) return;
     this.isStressed = on;
+    // Don't interrupt an in-progress burp animation — refreshAnim() will pick
+    // up the stress state once the burp's Phase 4 onComplete fires.
+    if (this.isBurping) return;
     if (on) this.visual.play(`blob_stress_${this.stage}`, true);
     else    this.refreshAnim();
   }

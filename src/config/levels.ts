@@ -180,4 +180,42 @@ export const LEVELS: LevelConfig[] = [
       { x: 3370, y: 424, type: "cake"       }, // +2;  100pts
     ],
   },
+
+  // ── Index 3: Level 3 — "All You Can Eat" ──────────────────────────────────
+  {
+    key: "level3",
+    timeLimit: 78,
+    music: "level",
+    scoreThreshold: 800,
+    name: "All You Can Eat",
+    playerStart: { x: 80, y: 514 },
+    // Food rule: never inside any duct or under a ceiling.
+    // Food sequence forces stage 7 before the mega-duct section.
+    foods: [
+      // S1: open start
+      { x: 200,  y: 500, type: "broccoli" }, // +1 → stage 1;  50pts
+      { x: 415,  y: 440, type: "banana"   }, // +1 → stage 2;  50pts  (Stair A, top y=464)
+      // S2: open floor after Wall 1
+      { x: 900,  y: 500, type: "icecream" }, // +2 → stage 4; 100pts
+      // S3: elevated platforms — require specific stage to reach
+      { x: 1240, y: 413, type: "fries"    }, // +2 → stage 6; 100pts  (fries platform top y=437)
+      { x: 1560, y: 454, type: "candy"    }, // +2 → stage 7; 100pts  (candy platform top y=478)
+      // S4: THE HUGE SECTION — Bob at stage 7, navigates slowly
+      { x: 1850, y: 500, type: "hotdog"   }, // +2 → MAX;     100pts
+      { x: 2480, y: 500, type: "pizza"    }, // +2 → MAX;     100pts  (after mega duct)
+      // S2: upper tower reward (Tower A2, top y=270)
+      { x: 990,  y: 246, type: "grapes"   }, // +1 → MAX;      50pts
+      // S5: platform chain reward (P2, top y=384)
+      { x: 2920, y: 360, type: "apple"    }, // +1 → MAX;      50pts
+      // S5b: high aerial platform reward (top y=290)
+      { x: 2900, y: 266, type: "banana"   }, // +1 → MAX;      50pts
+      // S6: sprint food
+      { x: 3270, y: 500, type: "carrot"   }, // +1 → MAX;      50pts
+      // S6: upper tower P3b reward (top y=320)
+      { x: 3365, y: 296, type: "strawberry" }, // +1 → MAX;   50pts
+      // S6: upper tower P3c reward (top y=200)
+      { x: 3505, y: 176, type: "watermelon" }, // +1 → MAX;   50pts
+      { x: 3560, y: 376, type: "cake"     }, // +2 → MAX;     100pts  (P4, top y=400)
+    ],
+  },
 ];

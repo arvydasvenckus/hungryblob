@@ -28,11 +28,12 @@ export const LEVEL_HEIGHT = 560;
 const FLOOR_Y = LEVEL_HEIGHT - T; // 528
 
 export interface LevelObjects {
-  platforms:  Phaser.Physics.Arcade.StaticGroup;
-  exitZone:   Phaser.GameObjects.Zone;
-  bgGraphics: Phaser.GameObjects.Graphics;
-  levelWidth: number;
-  levelHeight: number;
+  platforms:      Phaser.Physics.Arcade.StaticGroup;
+  exitZone:       Phaser.GameObjects.Zone;
+  exitDoorImage:  Phaser.GameObjects.Image;
+  bgGraphics:     Phaser.GameObjects.Graphics;
+  levelWidth:     number;
+  levelHeight:    number;
 }
 
 export function buildLevel1(scene: Phaser.Scene): LevelObjects {
@@ -132,23 +133,15 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const exitX = LEVEL_WIDTH - T * 3;
   const exitY  = FLOOR_Y - T * 2;
 
-  const exitGfx = scene.add.graphics();
-  exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T * 1.5, T * 2);
-  exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T * 1.5, T * 2);
-  exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T * 0.6, 18, T, 8, T * 1.4);
-  exitGfx.generateTexture("exit_door", T * 1.5, T * 2);
-  exitGfx.destroy();
-
-  scene.add.image(exitX + T * 0.75, exitY + T, "exit_door");
+  const exitDoorImage = scene.add.image(exitX + T * 0.75, exitY + T, "exit_door_locked");
   const exitZone = scene.add.zone(exitX + T * 0.75, exitY + T, T * 1.5, T * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
-  // ── Exit label only — all other hints are managed by GameScene (progressive disclosure)
   scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", {
     fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2,
   }).setOrigin(0.5);
 
-  return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL_WIDTH, levelHeight: LEVEL_HEIGHT };
+  return { platforms, exitZone, exitDoorImage, bgGraphics: bg, levelWidth: LEVEL_WIDTH, levelHeight: LEVEL_HEIGHT };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -296,8 +289,9 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   // Step A: bridge from high (y=340) to mid (y=420) zone
   wall2(1500, 380, 140, T2, true);   // intermediate step y=380 (high→mid bridge)
   wall2(1640, 436, 120, T2, true);   // step down toward floor y=436
-  // Vertical wall with GAP_B gap — stages 0–2 pass (stepping platform at y=436)
-  vertWall(1760, 361, 436);           // gap: y=361–436 = 75px
+  // Vertical wall — stages 0–2 pass (stepping platform at y=436)
+  // Widened from 75px to 82px: stage 2 (66px) now has 16px clearance instead of 6px.
+  vertWall(1760, 354, 436);           // gap: y=354–436 = 82px
   // (Bob drops from x=1760 right side back to floor)
 
   // ── Zone 6 (x=1900–2200): GAP_C floor duct (stages 0–3) ──────────────────
@@ -310,14 +304,7 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   const exitX = LEVEL2_WIDTH - T2 * 3;
   const exitY = FLOOR2 - T2 * 2;
 
-  if (!scene.textures.exists("exit_door")) {
-    const exitGfx = scene.add.graphics();
-    exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T2 * 1.5, T2 * 2);
-    exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T2 * 1.5, T2 * 2);
-    exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T2 * 0.6, 18, T2, 8, T2 * 1.4);
-    exitGfx.generateTexture("exit_door", T2 * 1.5, T2 * 2); exitGfx.destroy();
-  }
-  scene.add.image(exitX + T2 * 0.75, exitY + T2, "exit_door");
+  const exitDoorImage = scene.add.image(exitX + T2 * 0.75, exitY + T2, "exit_door_locked");
   const exitZone = scene.add.zone(exitX + T2 * 0.75, exitY + T2, T2 * 1.5, T2 * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
@@ -325,7 +312,7 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
     { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
 
-  return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL2_WIDTH, levelHeight: LEVEL2_HEIGHT };
+  return { platforms, exitZone, exitDoorImage, bgGraphics: bg, levelWidth: LEVEL2_WIDTH, levelHeight: LEVEL2_HEIGHT };
 }
 
 // ─── Theme: Restaurant Kitchen (Tutorial) ───────────────────────────────────
@@ -658,14 +645,7 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
   const exitX = LEVEL3_WIDTH - T3 * 4;
   const exitY = FLOOR3 - T3 * 2;
 
-  if (!scene.textures.exists("exit_door")) {
-    const exitGfx = scene.add.graphics();
-    exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T3 * 1.5, T3 * 2);
-    exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T3 * 1.5, T3 * 2);
-    exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T3 * 0.6, 18, T3, 8, T3 * 1.4);
-    exitGfx.generateTexture("exit_door", T3 * 1.5, T3 * 2); exitGfx.destroy();
-  }
-  scene.add.image(exitX + T3 * 0.75, exitY + T3, "exit_door");
+  const exitDoorImage = scene.add.image(exitX + T3 * 0.75, exitY + T3, "exit_door_locked");
   const exitZone = scene.add.zone(exitX + T3 * 0.75, exitY + T3, T3 * 1.5, T3 * 2);
   scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
 
@@ -673,6 +653,214 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
     { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
 
-  return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL3_WIDTH, levelHeight: LEVEL3_HEIGHT };
+  return { platforms, exitZone, exitDoorImage, bgGraphics: bg, levelWidth: LEVEL3_WIDTH, levelHeight: LEVEL3_HEIGHT };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Level 4 — "All You Can Eat"   (neon nightclub theme)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Hardest level. Rare foods force Bob to stage 7 (160px) through a food gauntlet,
+ * then a 165px mega-duct squeezes him through with just 5px clearance.
+ * Four distinct squeeze points of escalating tightness.
+ *
+ * Stage progression eating in order:
+ *   broccoli (+1) → 1  |  banana (+1) → 2
+ *   [Wall 1: 68px floor gap — stage 2 just fits]
+ *   icecream (+2) → 4
+ *   [Fries platform: rise=91px — stage 4 (91px jump) just reaches]
+ *   fries    (+2) → 6
+ *   [Candy platform: rise=50px — stage 6 (53px jump) just reaches]
+ *   candy    (+2) → 7 MAX
+ *   ★ MEGA DUCT: 165px ceiling — stage 7 (160px) fits with 5px clearance ★
+ *   hotdog / pizza (+2 each) → stay MAX, score only
+ *   [Wall 2: 88px floor gap — must burp from 7 to stage 3]
+ *   apple (+1) — platform reward
+ *   [Tight duct: 68px — must be stage ≤2]
+ *   carrot (+1) / cake (+2) — score run
+ *   [Final wall: 50px mid-height gap — stages 0–1 only]
+ *
+ * Gap physics:
+ *   68px  → stages 0–2 (≤66px) pass; stage 3 blocked
+ *   88px  → stages 0–3 (≤85px) pass; stage 4 blocked
+ *   165px → all stages; stage 7 (160px) with 5px clearance
+ *   50px  → stages 0–1 (≤47px) only — final squeeze
+ */
+export const LEVEL4_WIDTH  = 4600;
+export const LEVEL4_HEIGHT = 560;
+
+export function buildLevel4(scene: Phaser.Scene): LevelObjects {
+  const T4     = TILE_SIZE;
+  const FLOOR4 = LEVEL4_HEIGHT - T4; // 528
+
+  const platforms = scene.physics.add.staticGroup();
+
+  const bg = scene.add.graphics();
+  bg.setDepth(-10);
+  bg.fillStyle(0x05010e, 1);
+  bg.fillRect(0, 0, LEVEL4_WIDTH, LEVEL4_HEIGHT);
+  drawNightclubBg(bg, LEVEL4_WIDTH, LEVEL4_HEIGHT);
+
+  // ── Platform helper — dark purple with neon magenta top edge ──────────────
+  function wall4(x: number, y: number, w: number, h: number, raised = false) {
+    const g = scene.add.graphics();
+    g.fillStyle(raised ? 0x28094a : 0x1c0430, 1);
+    g.fillRect(0, 0, w, h);
+    g.fillStyle(0xe83f8c, 0.9); g.fillRect(0, 0, w, 3);   // neon top highlight
+    g.fillStyle(0xff6baf, 0.2); g.fillRect(0, 0, 2, h);   // left edge
+    if (w > 64) {
+      g.fillStyle(0xe83f8c, 0.28);
+      for (let rx = 18; rx < w - 18; rx += 52) g.fillCircle(rx, h / 2, 3.5);
+    }
+    g.fillStyle(0x080008, 0.5); g.fillRect(0, h - 3, w, 3);
+    const key = `l4_wall_${x}_${y}_${w}_${h}`;
+    g.generateTexture(key, w, h);
+    g.destroy();
+    const img = scene.physics.add.staticImage(x + w / 2, y + h / 2, key);
+    img.setDisplaySize(w, h); img.refreshBody();
+    platforms.add(img);
+  }
+
+  function ductCeiling4(x: number, gap: number, width: number, thickness = T4) {
+    wall4(x, FLOOR4 - gap - thickness, width, thickness);
+  }
+
+  function vertWall4(x: number, gapTop: number, gapBottom: number) {
+    if (gapTop > 0)         wall4(x, 0,         T4, gapTop);
+    if (gapBottom < FLOOR4) wall4(x, gapBottom, T4, FLOOR4 - gapBottom);
+  }
+
+  // ── Boundaries ─────────────────────────────────────────────────────────────
+  wall4(0,                 0,       T4,            LEVEL4_HEIGHT);
+  wall4(LEVEL4_WIDTH - T4, 0,       T4,            LEVEL4_HEIGHT);
+  wall4(0,                 0,       LEVEL4_WIDTH,  T4);
+  wall4(0,                 FLOOR4,  LEVEL4_WIDTH,  T4);
+
+  // ── S1: Ascending staircase (x=350–480) — rise=64px, all stages ────────────
+  wall4(350, 464, 130, T4, true);
+
+  // ── S2: Wall 1 — floor-level 68px gap (x=680) ─────────────────────────────
+  // Stage 2 (66px) just fits: 66 < 68. Stage 3+ blocked.
+  vertWall4(680, 460, 528);
+
+  // ── S2: Upper tower in the open section after Wall 1 ──────────────────────
+  // Bob is at most stage 2 here (passed the 68px gap).
+  // Tower A1: rise=139px from floor — stage 2 (139px jump) EXACTLY reaches.
+  wall4(790, 389, 120, T4, true);
+  // Tower A2: 119px rise from A1 — stages 0–2 reach from A1.
+  wall4(930, 270, 120, T4, true);
+
+  // ── S3: Junk-food platform islands ─────────────────────────────────────────
+  // Fries platform: rise=91px — stage 4 (91px jump) barely reaches.
+  wall4(1180, 437, 120, T4, true);
+  // Candy platform: rise=50px — stage 6 (53px jump) barely reaches.
+  wall4(1500, 478, 120, T4, true);
+
+  // ── S4: THE HUGE SECTION ───────────────────────────────────────────────────
+  // Open neon floor. Stage 7 Bob (160px) crawls slowly through.
+  // ★ Mega duct: 165px gap → stage 7 (160px) has just 5px clearance ★
+  //   ceiling bottom at y=363, stage-7 body top at y=368 → 5px to spare
+  ductCeiling4(2050, 165, 350);
+
+  // ── S5: Wall 2 — floor-level 88px gap (x=2600) ────────────────────────────
+  // Stage 3 (85px) fits: 85 < 88. Stage 4+ blocked.
+  // Bob must burp from 7 down to 3 (four burps) to proceed.
+  vertWall4(2600, 440, 528);
+
+  // ── S5: Platform chain after Wall 2 (stages 0–3) ──────────────────────────
+  // P1: rise=96px — stage 3 (115px) reaches; stage 4 cannot (91 < 96).
+  wall4(2700, 432, 120, T4, true);
+  // P2: 48px rise from P1 — all stages reach from P1. Apple rests here.
+  wall4(2860, 384, 120, T4, true);
+
+  // Tight duct: 68px (stages 0–2 only). One final burp if still at stage 3.
+  ductCeiling4(3050, 68, 180);
+
+  // ── S5b: Aerial platform above P2 (x=2830–2960) ──────────────────────────
+  // High platform reachable from P2 (y=384). Rise = 384-290 = 94px.
+  // Stage 2 (139 > 94 ✓) and stage 3 (115 > 94 ✓) reach from P2.
+  wall4(2840, 290, 120, T4, true);
+
+  // ── S6: Platform reward run (x=3290–3640) ─────────────────────────────────
+  // P3: rise=96px from floor — stage 2 (139px) reaches easily.
+  wall4(3290, 432, 150, T4, true);
+  // Upper P3b: 112px rise from P3 — stage 2 (139>112 ✓), stage 3 (115>112 ✓).
+  wall4(3300, 320, 130, T4, true);
+  // Upper P3c: 120px rise from P3b — stage 1 (168>120 ✓), stage 2 (139>120 ✓).
+  wall4(3440, 200, 130, T4, true);
+  // P4: 32px rise from P3 — all stages. Cake rests here.
+  wall4(3490, 400, 150, T4, true);
+
+  // ── S7: Final squeeze — mid-height 50px gap, stages 0–1 only ──────────────
+  // Stepping platform: rise=50px from floor.
+  // Stages 0–1 (≤47px body) fit through; stage 2+ blocked.
+  wall4(4020, 478, 130, T4, true);
+  vertWall4(4150, 428, 478);
+
+  // ── EXIT ──────────────────────────────────────────────────────────────────
+  const exitX = LEVEL4_WIDTH - T4 * 3;
+  const exitY  = FLOOR4 - T4 * 2;
+
+  const exitDoorImage = scene.add.image(exitX + T4 * 0.75, exitY + T4, "exit_door_locked");
+  const exitZone = scene.add.zone(exitX + T4 * 0.75, exitY + T4, T4 * 1.5, T4 * 2);
+  scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
+
+  // ── Hints ─────────────────────────────────────────────────────────────────
+  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
+    fontSize: "13px", color: "#ff6baf", fontFamily: "CandyBeans, monospace",
+    stroke: "#000", strokeThickness: 2, align: "center",
+  };
+  scene.add.text(360,  FLOOR4 - 68, "up you go →",              { ...hs }).setOrigin(0, 0.5);
+  scene.add.text(690,  FLOOR4 - 68, "smaller gets through →",   { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
+  scene.add.text(1190, FLOOR4 - 68, "earn your size ↑",         { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
+  scene.add.text(2060, FLOOR4 - 68, "barely fits – just keep moving.", { ...hs, color: "#ff2d78" }).setOrigin(0, 0.5);
+  scene.add.text(2610, FLOOR4 - 68, "time to digest.",           { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
+  scene.add.text(3060, FLOOR4 - 68, "one more squeeze →",       { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
+  scene.add.text(4025, FLOOR4 - 68, "go tiny to finish →",      { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
+  scene.add.text(exitX + T4 * 0.75, exitY - 22, "EXIT ▼",
+    { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace",
+      stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
+
+  return { platforms, exitZone, exitDoorImage, bgGraphics: bg, levelWidth: LEVEL4_WIDTH, levelHeight: LEVEL4_HEIGHT };
+}
+
+function drawNightclubBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+  const PINK = 0xff2d78;
+  const CYAN = 0x00f5ff;
+  const T    = TILE_SIZE;
+
+  // Subtle purple grid
+  g.lineStyle(1, 0x1a0030, 0.35);
+  for (let x = 0; x <= w; x += 64) {
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.strokePath();
+  }
+  for (let y = 0; y <= h; y += 64) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+  }
+
+  // Neon ceiling strip lights alternating pink / cyan
+  for (let x = 80; x < w - 40; x += 280) {
+    g.fillStyle(PINK, 0.22); g.fillRect(x,       T + 6, 180, 4);
+    g.fillStyle(PINK, 0.06); g.fillRect(x - 4,   T + 4, 188, 10);
+  }
+  for (let x = 260; x < w; x += 280) {
+    g.fillStyle(CYAN, 0.16); g.fillRect(x,  T + 6, 80, 4);
+    g.fillStyle(CYAN, 0.04); g.fillRect(x,  T + 3, 80, 10);
+  }
+
+  // Floor glow strip
+  g.fillStyle(PINK, 0.28); g.fillRect(0, h - T - 4, w, 4);
+  g.fillStyle(PINK, 0.07); g.fillRect(0, h - T - 14, w, 14);
+
+  // Circular spotlight pools on the dance-floor area
+  for (let x = 300; x < w - 200; x += 600) {
+    g.fillStyle(PINK, 0.05); g.fillCircle(x,       h * 0.55, 90);
+    g.fillStyle(CYAN, 0.05); g.fillCircle(x + 300, h * 0.42, 70);
+  }
+
+  // Dark bar/counter along the floor — nightclub aesthetic
+  g.fillStyle(0x0c0016, 1);   g.fillRect(0, h - 60, w, 60);
+  g.fillStyle(PINK,    0.35); g.fillRect(0, h - 61, w, 3);
+  g.fillStyle(0x1a0030, 0.8); g.fillRect(0, h - 58, w, 2);
 }
 

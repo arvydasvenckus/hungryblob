@@ -7,7 +7,7 @@ import { TimerSystem } from "../systems/TimerSystem";
 import { SoundSystem } from "../systems/SoundSystem";
 import { Blob } from "../entities/Blob";
 import { Food } from "../entities/Food";
-import { buildLevel1, buildLevel2, buildLevel3, LEVEL_HEIGHT } from "./LevelBuilder";
+import { buildLevel1, buildLevel2, buildLevel3, buildLevel4, LEVEL_HEIGHT } from "./LevelBuilder";
 
 export class GameScene extends Phaser.Scene {
   private blob!: Blob;
@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   private stressTriggered = false;
   private blobWasOnGround = true;
   private lockLabel: Phaser.GameObjects.Text | null = null;
+  private exitDoorImage: Phaser.GameObjects.Image | null = null;
   private exitLocked = false;
   // Burp mash mechanic
   private mashKeyZ!: Phaser.Input.Keyboard.Key;
@@ -46,6 +47,7 @@ export class GameScene extends Phaser.Scene {
     this.foods = [];
     this.timerSystem = null;
     this.lockLabel = null;
+    this.exitDoorImage = null;
     this.exitLocked = false;
     this.lastMashTimeZ = 0;
     this.lastMashTimeX = 0;
@@ -58,8 +60,9 @@ export class GameScene extends Phaser.Scene {
     const levelCfg = LEVELS[this.levelIndex];
 
     // Select the correct level builder
-    const { platforms, exitZone, levelWidth, levelHeight } =
-      ([buildLevel1, buildLevel2, buildLevel3][this.levelIndex] ?? buildLevel3)(this);
+    const { platforms, exitZone, exitDoorImage, levelWidth, levelHeight } =
+      ([buildLevel1, buildLevel2, buildLevel3, buildLevel4][this.levelIndex] ?? buildLevel4)(this);
+    this.exitDoorImage = exitDoorImage;
     this.exitZone = exitZone;
 
     this.physics.world.setBounds(0, 0, levelWidth, levelHeight);
@@ -148,7 +151,7 @@ export class GameScene extends Phaser.Scene {
           this.stressTriggered = true;
           this.blob.setStressed(true);
           this.soundSystem.stressHeartbeat();
-          ui.events.emit("show-message", "HURRY UP!", "#f39c12");
+          ui.events.emit("show-stress-msg", "get cracking.", "#f39c12");
         }
 
         if (type === "expired") this.failLevel();
@@ -232,6 +235,15 @@ export class GameScene extends Phaser.Scene {
     const threshold = LEVELS[this.levelIndex].scoreThreshold;
     if (this.exitLocked && threshold > 0 && this.score >= threshold) {
       this.exitLocked = false;
+      // Swap door to open state with a quick scale pulse
+      if (this.exitDoorImage) {
+        this.exitDoorImage.setTexture("exit_door_open");
+        this.tweens.add({
+          targets: this.exitDoorImage,
+          scaleX: 1.3, scaleY: 1.3,
+          duration: 180, ease: "Sine.Out", yoyo: true,
+        });
+      }
       if (this.lockLabel) {
         this.lockLabel.setText("✓ EXIT").setColor("#6fdc8c");
         this.time.delayedCall(1200, () => this.lockLabel?.setVisible(false));
@@ -266,6 +278,7 @@ export class GameScene extends Phaser.Scene {
     this.soundSystem.levelComplete();
 
     const ui = this.scene.get("UIScene");
+    ui.events.emit("hide-stress-msg");
     ui.events.emit("update-score", this.score);
     ui.events.emit("show-message", "LEVEL COMPLETE!", "#6fdc8c");
 
@@ -282,6 +295,7 @@ export class GameScene extends Phaser.Scene {
     this.soundSystem.levelFail();
 
     const ui = this.scene.get("UIScene");
+    ui.events.emit("hide-stress-msg");
     ui.events.emit("show-message", "TIME'S UP!", "#e74c3c");
 
     this.blob.playSadAnim();

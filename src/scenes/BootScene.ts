@@ -1,10 +1,57 @@
 import Phaser from "phaser";
-import { SIZE_STAGES } from "../config/constants";
+import { SIZE_STAGES, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from "../config/constants";
 
 export class BootScene extends Phaser.Scene {
   constructor() { super({ key: "BootScene" }); }
 
   preload() {
+    // ── Loading screen ──────────────────────────────────────────────────────
+    // All graphics are added before any this.load calls so they appear
+    // immediately on the first rendered frame.
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    const bgG = this.add.graphics();
+    bgG.fillStyle(0x0d0d1a, 1);
+    bgG.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    this.add.text(cx, cy - 170, "HUNGRY BOB", {
+      fontSize: "110px", color: "#6fdc8c",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      stroke: "#000000", strokeThickness: 8,
+    }).setOrigin(0.5);
+
+    this.add.text(cx, cy - 52, "eat. grow. squeeze.", {
+      fontSize: "36px", color: "#718096",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+    }).setOrigin(0.5);
+
+    const BAR_W = 560, BAR_H = 16;
+    const bx = cx - BAR_W / 2;
+    const by = cy + 60;
+
+    const track = this.add.graphics();
+    track.fillStyle(0x1e2a3a, 1);
+    track.fillRoundedRect(bx, by, BAR_W, BAR_H, 8);
+
+    const barFill = this.add.graphics();
+
+    const label = this.add.text(cx, by + BAR_H + 28, "loading.", {
+      fontSize: "24px", color: "#4a5568",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+    }).setOrigin(0.5);
+
+    this.load.on("progress", (v: number) => {
+      barFill.clear();
+      barFill.fillStyle(0x6fdc8c, 1);
+      barFill.fillRoundedRect(bx, by, Math.max(BAR_W * v, 16), BAR_H, 8);
+    });
+
+    this.load.on("complete", () => {
+      label.setText("almost there.");
+    });
+
+    // ── Assets ──────────────────────────────────────────────────────────────
     this.load.image("vinted-logo",      "images/vinted-logo.png");
     this.load.image("hungry-bob-logo",  "images/hungry-bob-logo.png");
     this.load.image("star-full",        "images/star-full.png");
@@ -31,8 +78,78 @@ export class BootScene extends Phaser.Scene {
     this.generateBlobTextures();
     this.generateFoodTextures();
     this.generateUITextures();
+    this.generateDoorTextures();
     this.createAnimations();
     this.scene.start("MenuScene");
+  }
+
+  // ─── Door textures ─────────────────────────────────────────────────────────
+
+  private generateDoorTextures() {
+    const W = Math.round(TILE_SIZE * 1.5); // 48
+    const H = TILE_SIZE * 2;               // 64
+
+    // ── Locked door — dark, red-tinted, padlock icon ──────────────────────
+    {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      // Dark steel background
+      g.fillStyle(0x16182a, 1); g.fillRect(0, 0, W, H);
+      // Inner panel
+      g.fillStyle(0x1c2038, 0.9); g.fillRect(3, 3, W - 6, H - 6);
+      // Subtle vertical plank lines
+      g.lineStyle(1, 0x111524, 0.7);
+      for (let x = 12; x < W - 3; x += 10) {
+        g.beginPath(); g.moveTo(x, 5); g.lineTo(x, H - 5); g.strokePath();
+      }
+      // Red border — signals inaccessibility
+      g.lineStyle(2.5, 0x8b2222, 0.95); g.strokeRect(1.5, 1.5, W - 3, H - 3);
+      g.lineStyle(1, 0xc0392b, 0.45);   g.strokeRect(4, 4, W - 8, H - 8);
+
+      // Padlock ────────────────────────────────────────────────────────────
+      const cx     = W / 2;   // 24
+      const bodyY  = 37;
+      const bodyW  = 22;
+      const bodyH  = 18;
+      const bodyX  = cx - bodyW / 2; // 13
+      const archR  = bodyW / 2;      // 11 — arch radius matches body width
+
+      // Shackle arch (U-shape over the body)
+      g.lineStyle(5, 0x6b3030, 1);
+      g.beginPath();
+      g.arc(cx, bodyY, archR, Math.PI, 0, true); // counterclockwise = goes up
+      g.strokePath();
+
+      // Lock body
+      g.fillStyle(0x5a2828, 1);
+      g.fillRoundedRect(bodyX, bodyY, bodyW, bodyH, 4);
+      g.fillStyle(0x7a3838, 0.5);
+      g.fillRoundedRect(bodyX + 2, bodyY + 2, bodyW - 4, 4, 2); // top highlight
+
+      // Keyhole: circle + slot
+      g.fillStyle(0x111524, 1);
+      g.fillCircle(cx, bodyY + 7, 3.5);
+      g.fillRect(cx - 2, bodyY + 10, 4, 5);
+
+      g.generateTexture("exit_door_locked", W, H);
+      g.destroy();
+    }
+
+    // ── Open door — bright green, large arrow ─────────────────────────────
+    {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0x27ae60, 0.22); g.fillRect(0, 0, W, H);
+      g.fillStyle(0x2ecc71, 0.07); g.fillRect(5, 5, W - 10, H - 10);
+      g.lineStyle(3, 0x2ecc71, 1); g.strokeRect(1.5, 1.5, W - 3, H - 3);
+      g.lineStyle(1, 0x27ae60, 0.6); g.strokeRect(4, 4, W - 8, H - 8);
+      // Main arrow
+      g.fillStyle(0x2ecc71, 1);
+      g.fillTriangle(11, 19, 11, 45, 36, 32);
+      // Secondary smaller chevron for depth
+      g.fillStyle(0x2ecc71, 0.32);
+      g.fillTriangle(27, 24, 27, 40, 38, 32);
+      g.generateTexture("exit_door_open", W, H);
+      g.destroy();
+    }
   }
 
   // ─── Blob sprite sheets ────────────────────────────────────────────────────

@@ -26,10 +26,12 @@ const SODA_FOAM      = 0xfdf6e3; // cream head
 export class UIScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private timerHidden = false;
+  private timerPulsing = false;
   private scoreText!: Phaser.GameObjects.Text;
   private scoreThreshold = 0;
   private goalText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
+  private stressText!: Phaser.GameObjects.Text; // persistent "get cracking" during stress
 
   // Dock
   private dockBg!: Phaser.GameObjects.Graphics;
@@ -53,6 +55,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.timerHidden    = false;
+    this.timerPulsing   = false;
     this.scoreThreshold = 0;
     this.currentFill    = 0;
     this.activeBubbles  = 0;
@@ -100,6 +103,12 @@ export class UIScene extends Phaser.Scene {
       stroke: "#000000", strokeThickness: 6, align: "center",
     }).setOrigin(0.5).setDepth(10).setVisible(false);
 
+    // ── Persistent stress message (stays until level ends) ─────────────────
+    this.stressText = this.add.text(GAME_WIDTH / 2, 148, "", {
+      fontSize: "48px", color: "#f39c12", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      stroke: "#000000", strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(10).setVisible(false);
+
     // ── Event wiring ───────────────────────────────────────────────────────
     this.events.on("update-timer",       (r: number)             => this.setTimer(r));
     this.events.on("update-score",       (s: number)             => this.setScore(s));
@@ -113,6 +122,8 @@ export class UIScene extends Phaser.Scene {
     this.events.on("set-score-threshold",(t: number)             => this.setGoal(t));
     this.events.on("exit-unlocked",      ()                      => this.onExitUnlocked());
     this.events.on("show-ring-hint",     ()                      => this.showRingHighlight());
+    this.events.on("show-stress-msg",   (m: string, c: string)  => { this.stressText.setText(m).setColor(c).setVisible(true); });
+    this.events.on("hide-stress-msg",   ()                      => { this.stressText.setVisible(false); });
   }
 
   // ─── Dock construction ────────────────────────────────────────────────────
@@ -310,6 +321,17 @@ export class UIScene extends Phaser.Scene {
     const secs = Math.floor(remaining % 60);
     this.timerText.setText(`${mins}:${secs.toString().padStart(2, "0")}`);
     this.timerText.setColor(remaining < 15 ? "#e74c3c" : "#ffffff");
+
+    // Start pulse tween once when time crosses 15s
+    if (remaining <= 30 && !this.timerPulsing) {
+      this.timerPulsing = true;
+      this.tweens.add({
+        targets: this.timerText,
+        scaleX: 1.18, scaleY: 1.18,
+        duration: 350, ease: "Sine.InOut",
+        yoyo: true, repeat: -1,
+      });
+    }
   }
 
   private setGoal(threshold: number) {
