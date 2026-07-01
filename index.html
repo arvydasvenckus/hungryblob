@@ -30,6 +30,17 @@
   </head>
   <body>
     <div id="game"></div>
+    <!-- Pre-load CandyBeans before Phaser starts so Canvas text renders on the first frame -->
+    <script>
+      (function () {
+        var f = new FontFace("CandyBeans", "url('/fonts/CandyBeans.otf') format('opentype')");
+        f.load().then(function (loaded) {
+          document.fonts.add(loaded);
+        }).catch(function () {
+          /* font load failed — fall back to monospace silently */
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

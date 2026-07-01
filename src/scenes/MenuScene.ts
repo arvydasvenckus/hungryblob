@@ -33,29 +33,24 @@ export class MenuScene extends Phaser.Scene {
       bg.beginPath(); bg.moveTo(0, y); bg.lineTo(GAME_WIDTH, y); bg.strokePath();
     }
 
-    // Title
-    this.add.text(GAME_WIDTH / 2, 140, "HUNGRY BOB", {
-      fontSize: "130px", color: "#6fdc8c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-      stroke: "#000000", strokeThickness: 10,
-    }).setOrigin(0.5);
-
-    this.add.text(GAME_WIDTH / 2, 300, "eat. grow. squeeze.", {
-      fontSize: "40px", color: "#a0aec0", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
-    }).setOrigin(0.5);
-
-    // Animated Bob preview
-    const bob = this.add.sprite(GAME_WIDTH / 2, 440, "blob_stage0", 0);
-    bob.setScale(2);
-    bob.play("blob_idle_0");
-    this.tweens.add({ targets: bob, y: 425, duration: 1200, ease: "Sine.InOut", yoyo: true, repeat: -1 });
+    // ── Logo (replaces plain-text title + animated Bob sprite) ───────────────
+    // Logo is 1024×568 with a black background — SCREEN blend erases the black
+    // so the artwork floats directly on the menu backdrop.
+    const logo = this.add.image(GAME_WIDTH / 2, 240, "hungry-bob-logo");
+    logo.setOrigin(0.5, 0.5);
+    // Scale to 600px wide (original 1024px → scale ≈ 0.586)
+    logo.setScale(0.586);
+    logo.setBlendMode(Phaser.BlendModes.SCREEN);
+    // Gentle float tween matching the old Bob sprite
+    this.tweens.add({ targets: logo, y: 228, duration: 1400, ease: "Sine.InOut", yoyo: true, repeat: -1 });
 
     // Controls hint
-    this.add.text(GAME_WIDTH / 2, 560, "← → move   ↑ / SPACE jump   ESC pause", {
+    this.add.text(GAME_WIDTH / 2, 460, "← → move   ↑ / SPACE jump   ESC pause", {
       fontSize: "28px", color: "#718096", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
     // ── Level selector ─────────────────────────────────────────────────────
-    this.add.text(GAME_WIDTH / 2, 650, "─── SELECT LEVEL ───", {
+    this.add.text(GAME_WIDTH / 2, 560, "─── SELECT LEVEL ───", {
       fontSize: "30px", color: "#4a5568", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
@@ -64,7 +59,7 @@ export class MenuScene extends Phaser.Scene {
     const CARD_GAP   = 60;
     const totalW     = LEVELS.length * CARD_W + (LEVELS.length - 1) * CARD_GAP;
     const cardStartX = (GAME_WIDTH - totalW) / 2;
-    const CARD_Y     = 700;
+    const CARD_Y     = 610;
 
     let acting = false;
     const go = (level: number) => {

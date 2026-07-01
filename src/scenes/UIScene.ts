@@ -406,6 +406,14 @@ export class UIScene extends Phaser.Scene {
     if (shouldShow !== this.mashHintActive) {
       this.mashHintActive = shouldShow;
       const alpha = shouldShow ? 0.55 : 0;
+      if (!shouldShow) {
+        // Kill any in-flight alpha tweens on the key containers before starting the
+        // hide tween, so a racing onMash tween cannot overwrite the final alpha=0.
+        this.tweens.killTweensOf(this.mashHintZ);
+        this.tweens.killTweensOf(this.mashHintX);
+        this.mashHintZ.setAlpha(0);
+        this.mashHintX.setAlpha(0);
+      }
       this.tweens.add({ targets: [this.mashHintZ, this.mashHintX], alpha, duration: 200 });
       if (shouldShow) {
         // Start the invitation bounce after fade-in completes
@@ -420,6 +428,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onMash(key: "Z" | "X") {
+    // Do nothing if the hints are supposed to be hidden (stage 0 or no cooldown).
+    // Without this guard, a mash that fires just after mashHintActive goes false
+    // creates a competing alpha tween that wins over the hide tween (H-A/H-B).
+    if (!this.mashHintActive) return;
     const activeCont  = key === "Z" ? this.mashHintZ   : this.mashHintX;
     const otherCont   = key === "Z" ? this.mashHintX   : this.mashHintZ;
     const activeLabel = key === "Z" ? this.mashLabelZ  : this.mashLabelX;
@@ -427,10 +439,10 @@ export class UIScene extends Phaser.Scene {
     // Stop invitation bounce — the press IS the feedback now
     this.mashBounceZ?.stop(); this.mashBounceX?.stop();
     this.mashHintZ.setY(this.mashBaseY); this.mashHintX.setY(this.mashBaseY);
-    // Flash pressed key: full brightness
-    activeCont.setAlpha(1); activeLabel.setColor("#ffffff");
+    // Flash pressed key: full brightness, keep dark label on light key
+    activeCont.setAlpha(1); activeLabel.setColor("#000000");
     // Dim other key
-    otherCont.setAlpha(0.4); otherLabel.setColor("#555555");
+    otherCont.setAlpha(0.35); otherLabel.setColor("#444444");
     // Fade back and restart invitation bounce once flash settles
     this.tweens.add({
       targets: activeCont, alpha: 0.7, delay: 60, duration: 120,
@@ -460,21 +472,21 @@ export class UIScene extends Phaser.Scene {
   private makeKeyHint(x: number, y: number, letter: string): [Phaser.GameObjects.Container, Phaser.GameObjects.Text] {
     const KW = 34, KH = 30, R = 5;
     const g = this.add.graphics();
-    // Key body — dark plastic
-    g.fillStyle(0x252525, 1);
+    // Key body — light gray (inverted from dark)
+    g.fillStyle(0xd8d8d8, 1);
     g.fillRoundedRect(-KW / 2, -KH / 2, KW, KH, R);
-    // Top-edge highlight (gives 3-D key lift)
-    g.fillStyle(0x484848, 1);
+    // Top-edge highlight — slightly lighter for the 3-D lift
+    g.fillStyle(0xf2f2f2, 1);
     g.fillRoundedRect(-KW / 2, -KH / 2, KW, 5, { tl: R, tr: R, bl: 0, br: 0 });
-    // Bottom press shadow
-    g.fillStyle(0x0a0a0a, 1);
+    // Bottom press shadow — slightly darker for depth
+    g.fillStyle(0xaaaaaa, 1);
     g.fillRoundedRect(-KW / 2, KH / 2 - 5, KW, 5, { tl: 0, tr: 0, bl: R, br: R });
-    // Border
-    g.lineStyle(1.5, 0x585858, 1);
+    // Border — medium gray
+    g.lineStyle(1.5, 0x999999, 1);
     g.strokeRoundedRect(-KW / 2 + 0.75, -KH / 2 + 0.75, KW - 1.5, KH - 1.5, R);
 
     const label = this.add.text(0, 0, letter, {
-      fontSize: "15px", color: "#888888", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, fontStyle: "bold",
+      fontSize: "15px", color: "#2a2a2a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, fontStyle: "bold",
     }).setOrigin(0.5);
 
     const container = this.add.container(x, y, [g, label]).setDepth(4).setAlpha(0);
