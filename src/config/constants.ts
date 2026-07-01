@@ -23,7 +23,7 @@ export const SHRINK_TWEEN_MS    = 500;
 // Per-stage physics — wider range makes the size difference feel dramatic.
 // Stage 0: nimble. Stage 7: sluggish. Perfect linear steps between extremes.
 export const STAGE_JUMP_VELOCITY = [-600, -550, -500, -455, -405, -355, -310, -260] as const;
-export const STAGE_WALK_SPEED    = [220,  202,  184,  167,  149,  131,  113,   95]  as const;
+export const STAGE_WALK_SPEED    = [235,  215,  195,  175,  155,  135,  115,   95]  as const;
 
 export const GRAVITY = 900;
 
