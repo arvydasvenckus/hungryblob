@@ -5,6 +5,7 @@ export class BootScene extends Phaser.Scene {
   constructor() { super({ key: "BootScene" }); }
 
   preload() {
+    this.load.image("vinted-logo", "images/vinted-logo.png");
     this.load.audio("bgmusic",   "music/the-show-must-be-go.mp3");
     this.load.audio("menumusic", "music/fluffing-a-duck.mp3");
     // Burps — stage-specific recordings (6 files cover 8 stages)
@@ -104,7 +105,7 @@ export class BootScene extends Phaser.Scene {
   ) {
     let sx = 1, sy = 1;
     let eyeOffY = 0;
-    let mouthMode: "normal" | "huge" | "burp_open" | "frown" = "normal";
+    let mouthMode: "normal" | "huge" | "burp_open" | "frown" | "stressed" = "normal";
     let stressed = false;
     let sad = false;
     let sweatDrops = false;
@@ -143,6 +144,7 @@ export class BootScene extends Phaser.Scene {
       sx = 1 + shake; sy = 1 - shake;
       stressed = true; sweatDrops = true;
       eyeOffY = -2;
+      mouthMode = "stressed";
     } else if (anim === "sad") {
       sy = 1 - f * 0.01;
       sad = true;
@@ -202,27 +204,35 @@ export class BootScene extends Phaser.Scene {
       }
     }
 
-    // Stressed brows (angled inward \/ shape)
+    // Stressed brows — worried Ω shape: outer corners low, inner corners raised
     if (stressed) {
       g.lineStyle(2.5, 0x1a1a2e, 1);
       g.beginPath();
-      g.moveTo(cx - sepX - eyeR * 0.8, eyeY - eyeR * 1.5);
-      g.lineTo(cx - sepX + eyeR * 0.3, eyeY - eyeR * 0.9);
+      g.moveTo(cx - sepX - eyeR * 0.8, eyeY - eyeR * 0.9);   // outer: lower
+      g.lineTo(cx - sepX + eyeR * 0.3, eyeY - eyeR * 1.6);   // inner: higher
       g.strokePath();
       g.beginPath();
-      g.moveTo(cx + sepX + eyeR * 0.8, eyeY - eyeR * 1.5);
-      g.lineTo(cx + sepX - eyeR * 0.3, eyeY - eyeR * 0.9);
+      g.moveTo(cx + sepX + eyeR * 0.8, eyeY - eyeR * 0.9);   // outer: lower
+      g.lineTo(cx + sepX - eyeR * 0.3, eyeY - eyeR * 1.6);   // inner: higher
       g.strokePath();
     }
 
-    // Sweat drops
+    // Sweat drops — on the cheeks, clearly below the eyes (ox can go outside blob bounds)
     if (sweatDrops) {
-      const dropX = bx + bw * 0.88;
-      const dropY = by + bh * 0.28;
-      g.fillStyle(0x74b9ff, 0.9);
-      // Teardrop: small circle + triangle
-      g.fillCircle(dropX, dropY + 4, 3);
-      g.fillTriangle(dropX - 3, dropY + 4, dropX + 3, dropY + 4, dropX, dropY - 2);
+      const drops = [
+        { ox:  1.04, oy: 0.50, phase: 0 }, // right cheek — slightly outside blob
+        { ox: -0.06, oy: 0.56, phase: 2 }, // left cheek  — slightly outside blob
+        { ox:  0.85, oy: 0.67, phase: 1 }, // lower right cheek
+      ];
+      g.fillStyle(0x74b9ff, 0.88);
+      for (const drop of drops) {
+        const dripPx = ((f + drop.phase) % 4) * bh * 0.038;
+        const dropX  = bx + bw * drop.ox;
+        const dropY  = by + bh * drop.oy + dripPx;
+        const sz     = Math.max(2, bw * 0.032);
+        g.fillCircle(dropX, dropY + sz, sz);
+        g.fillTriangle(dropX - sz, dropY + sz, dropX + sz, dropY + sz, dropX, dropY - sz * 0.6);
+      }
     }
 
     // Mouth
@@ -277,6 +287,24 @@ export class BootScene extends Phaser.Scene {
       g.beginPath();
       g.arc(cx, mouthCY + bh * 0.04, bw * 0.12, Math.PI + 0.3, -0.3);
       g.strokePath();
+    } else if (mouthMode === "stressed") {
+      // Grimace: same structure as eat animation — dark oval + 3 white teeth rects.
+      // Wide and flat ratio gives the tight grimace shape vs the tall eating oval.
+      const mw = bw * 0.32;
+      const mh = Math.max(4, bh * 0.07);
+      // Dark mouth area (wide and flat = grimace)
+      g.fillStyle(0x1a1a2e, 1);
+      g.fillEllipse(cx, mouthCY + mh * 0.5, mw, mh);
+      // Three white teeth at the top — same pattern as eat animation
+      g.fillStyle(0xffffff, 0.95);
+      for (let i = 0; i < 3; i++) {
+        g.fillRect(
+          cx - mw * 0.38 + i * mw * 0.30,
+          mouthCY,
+          mw * 0.22,
+          Math.max(2, mh * 0.45),
+        );
+      }
     } else {
       // Happy/neutral slight smile
       g.lineStyle(2.5, 0x1a1a2e, 0.85);
@@ -289,202 +317,369 @@ export class BootScene extends Phaser.Scene {
   // ─── Food textures ─────────────────────────────────────────────────────────
 
   private generateFoodTextures() {
-    const SIZE = 48;
+    const SIZE = 44;
 
     const foods: Array<{
       key: string;
       healthy: boolean;
       draw: (g: Phaser.GameObjects.Graphics) => void;
     }> = [
-      // ── HEALTHY ────────────────────────────────────────────────────────────
+      // ── HEALTHY — flat, matte, cool fresh colors, dark outline, no glow ────
       {
         key: "apple", healthy: true,
         draw: (g) => {
-          g.fillStyle(0xe74c3c, 1); g.fillCircle(24, 26, 18);
-          g.fillStyle(0x4a2f00, 1); g.fillRect(22, 6, 3, 8);
-          g.fillStyle(0x27ae60, 1); g.fillEllipse(30, 9, 14, 8);
-          g.fillStyle(0xffffff, 0.3); g.fillEllipse(17, 18, 7, 10);
+          g.fillStyle(0xe74c3c, 1); g.fillCircle(22, 25, 16);
+          g.fillStyle(0xc0392b, 0.25); g.fillCircle(22, 32, 8);
+          g.fillStyle(0x6b3f00, 1); g.fillRect(21, 8, 3, 8);
+          g.fillStyle(0x27ae60, 1); g.fillEllipse(28, 11, 12, 7);
+          g.lineStyle(1, 0x1e8449, 0.8); g.beginPath(); g.moveTo(26, 8); g.lineTo(32, 14); g.strokePath();
+          g.fillStyle(0xffffff, 0.28); g.fillEllipse(14, 18, 6, 9);
+          g.lineStyle(2, 0x1a2e1a, 0.9); g.strokeCircle(22, 25, 16);
         },
       },
       {
         key: "banana", healthy: true,
         draw: (g) => {
-          // Banana shape as filled polygon approximating a crescent
-          g.fillStyle(0xf1c40f, 1);
-          const pts = [
-            { x: 10, y: 40 }, { x: 14, y: 34 }, { x: 18, y: 26 },
-            { x: 24, y: 16 }, { x: 32, y: 10 }, { x: 40, y: 10 },
-            { x: 40, y: 15 }, { x: 34, y: 16 }, { x: 28, y: 20 },
-            { x: 22, y: 28 }, { x: 17, y: 36 }, { x: 14, y: 42 },
-          ];
-          g.fillPoints(pts, true);
-          g.fillStyle(0x4a3000, 1); g.fillCircle(10, 40, 3); g.fillCircle(40, 11, 3);
-          g.fillStyle(0xe2b80c, 0.5);
-          const stripe = [{ x:14,y:36 },{ x:20,y:24 },{ x:30,y:14 },{ x:36,y:11 },{ x:38,y:13 },{ x:32,y:18 },{ x:22,y:28 },{ x:16,y:40 }];
-          g.fillPoints(stripe, true);
+          // Proper horizontal crescent shape — wide arc from left tip to right tip
+          g.fillStyle(0xf4d03f, 1);
+          g.fillPoints([
+            { x: 5, y: 33 }, { x: 8, y: 21 }, { x: 14, y: 12 }, { x: 22, y: 9 },
+            { x: 30, y: 12 }, { x: 37, y: 22 }, { x: 38, y: 28 },
+            { x: 30, y: 27 }, { x: 22, y: 26 }, { x: 14, y: 25 }, { x: 8, y: 30 },
+          ], true);
+          // Shadow stripe along the concave inner edge
+          g.fillStyle(0xcba800, 0.4);
+          g.fillPoints([
+            { x: 8, y: 27 }, { x: 14, y: 23 }, { x: 22, y: 22 }, { x: 30, y: 23 }, { x: 37, y: 26 },
+            { x: 37, y: 28 }, { x: 30, y: 27 }, { x: 22, y: 26 }, { x: 14, y: 25 }, { x: 8, y: 30 },
+          ], true);
+          // Blunt tips
+          g.fillStyle(0x7a5200, 1); g.fillCircle(5, 33, 4); g.fillCircle(38, 27, 3);
+          // Outline
+          g.lineStyle(2, 0x1a2e1a, 0.9);
+          g.beginPath();
+          g.moveTo(5, 33); g.lineTo(8, 21); g.lineTo(14, 12); g.lineTo(22, 9);
+          g.lineTo(30, 12); g.lineTo(37, 22); g.lineTo(38, 28);
+          g.lineTo(30, 27); g.lineTo(22, 26); g.lineTo(14, 25); g.lineTo(8, 30);
+          g.closePath(); g.strokePath();
         },
       },
       {
         key: "broccoli", healthy: true,
         draw: (g) => {
-          g.fillStyle(0x5d8a3c, 1); g.fillRect(20, 28, 8, 16);
-          g.fillStyle(0x27ae60, 1); g.fillCircle(18, 22, 12); g.fillCircle(30, 22, 12);
-          g.fillCircle(24, 15, 10);
-          g.fillStyle(0x2ecc71, 0.4); g.fillCircle(16, 18, 5); g.fillCircle(28, 18, 5);
+          g.fillStyle(0x4a7c33, 1); g.fillRoundedRect(18, 30, 8, 12, 2);
+          g.fillStyle(0x5d9e40, 0.5); g.fillRect(19, 30, 3, 12);
+          g.fillStyle(0x27ae60, 1);
+          g.fillCircle(15, 22, 10); g.fillCircle(29, 22, 10); g.fillCircle(22, 15, 9);
+          g.fillStyle(0x58d68d, 0.5);
+          g.fillCircle(12, 18, 4); g.fillCircle(26, 18, 4); g.fillCircle(19, 12, 3);
+          g.lineStyle(2, 0x1a2e1a, 0.85);
+          g.strokeCircle(15, 22, 10); g.strokeCircle(29, 22, 10); g.strokeCircle(22, 15, 9);
+          g.strokeRoundedRect(18, 30, 8, 12, 2);
         },
       },
       {
         key: "carrot", healthy: true,
         draw: (g) => {
-          g.fillStyle(0xe67e22, 1); g.fillTriangle(12, 14, 36, 14, 24, 44);
-          g.fillStyle(0xf39c12, 0.6);
-          g.lineStyle(2, 0xd35400, 0.5);
-          for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(14+i*7, 18+i*4); g.lineTo(34-i*7, 18+i*4); g.strokePath(); }
-          g.fillStyle(0x27ae60, 1); g.fillEllipse(18, 11, 10, 7); g.fillEllipse(24, 8, 8, 6); g.fillEllipse(30, 11, 10, 7);
+          // Tapered body (trapezoid, not pure triangle)
+          g.fillStyle(0xe67e22, 1);
+          g.fillPoints([{ x: 11, y: 12 }, { x: 33, y: 12 }, { x: 28, y: 42 }, { x: 16, y: 42 }], true);
+          // Highlight stripe
+          g.fillStyle(0xf39c12, 0.45);
+          g.fillPoints([{ x: 16, y: 12 }, { x: 24, y: 12 }, { x: 22, y: 42 }, { x: 18, y: 42 }], true);
+          // Horizontal texture rings
+          g.lineStyle(1.5, 0xd35400, 0.45);
+          for (let i = 1; i <= 4; i++) {
+            const t = i / 5;
+            const x1 = 11 + t * (16 - 11); const x2 = 33 + t * (28 - 33);
+            const y = 12 + t * 30;
+            g.beginPath(); g.moveTo(x1 + 1, y); g.lineTo(x2 - 1, y); g.strokePath();
+          }
+          // Green leafy top (3 elongated ellipses)
+          g.fillStyle(0x27ae60, 1);
+          g.fillEllipse(14, 9, 9, 13); g.fillEllipse(22, 6, 7, 11); g.fillEllipse(30, 9, 9, 13);
+          // Body outline
+          g.lineStyle(2, 0x1a2e1a, 0.9);
+          g.beginPath();
+          g.moveTo(11, 12); g.lineTo(33, 12); g.lineTo(28, 42); g.lineTo(16, 42);
+          g.closePath(); g.strokePath();
         },
       },
       {
         key: "watermelon", healthy: true,
         draw: (g) => {
-          g.fillStyle(0x27ae60, 1); g.fillCircle(24, 24, 20);
-          g.fillStyle(0xe74c3c, 1); g.fillCircle(24, 26, 16);
+          g.fillStyle(0x1e8449, 1); g.fillCircle(22, 22, 19);
+          g.fillStyle(0xf5f5f5, 1); g.fillCircle(22, 22, 17);
+          g.fillStyle(0xe74c3c, 1); g.fillCircle(22, 22, 15);
+          // Seeds (elongated, more natural)
           g.fillStyle(0x1a1a2e, 1);
-          for (const [sx, sy] of [[20,22],[28,18],[16,28],[30,28],[24,24]]) g.fillCircle(sx, sy, 2);
-          g.lineStyle(3, 0x27ae60, 0.7);
-          g.beginPath(); g.moveTo(4, 24); g.lineTo(44, 24); g.strokePath();
+          g.fillEllipse(16, 19, 4, 6); g.fillEllipse(26, 17, 4, 6);
+          g.fillEllipse(14, 27, 4, 6); g.fillEllipse(28, 26, 4, 6);
+          g.lineStyle(2, 0x1a2e1a, 0.9); g.strokeCircle(22, 22, 19);
         },
       },
       {
         key: "grapes", healthy: true,
         draw: (g) => {
-          g.fillStyle(0x8e44ad, 1);
-          const gpos = [[24,14],[16,20],[32,20],[12,28],[24,28],[36,28],[18,36],[30,36],[24,44]];
-          gpos.forEach(([gx,gy]) => { g.fillCircle(gx, gy, 7); });
-          g.fillStyle(0xa569bd, 0.5); gpos.forEach(([gx,gy]) => { g.fillCircle(gx-2, gy-2, 2.5); });
-          g.fillStyle(0x4a2f00, 1); g.fillRect(22, 4, 4, 8);
-          g.fillStyle(0x27ae60, 1); g.fillEllipse(30, 7, 12, 7);
+          const gpos: [number, number][] = [
+            [22, 9],
+            [16, 16], [28, 16],
+            [10, 23], [22, 23], [34, 23],
+            [16, 30], [28, 30],
+            [22, 37],
+          ];
+          g.fillStyle(0x7d3c98, 1);
+          gpos.forEach(([gx, gy]) => g.fillCircle(gx, gy, 6));
+          g.fillStyle(0xa569bd, 0.5);
+          gpos.forEach(([gx, gy]) => g.fillCircle(gx - 2, gy - 2, 2));
+          g.fillStyle(0x6b3f00, 1); g.fillRect(20, 2, 4, 8);
+          g.fillStyle(0x27ae60, 1); g.fillEllipse(28, 6, 10, 6);
+          g.lineStyle(1.5, 0x1a2e1a, 0.75);
+          gpos.forEach(([gx, gy]) => g.strokeCircle(gx, gy, 6));
         },
       },
       {
         key: "orange", healthy: true,
         draw: (g) => {
-          g.fillStyle(0xe67e22, 1); g.fillCircle(24, 24, 19);
-          g.fillStyle(0xf39c12, 0.5);
-          for (let i = 0; i < 6; i++) { g.lineStyle(1.5, 0xd35400, 0.3); g.beginPath(); g.moveTo(24,24); const a=i*Math.PI/3; g.lineTo(24+Math.cos(a)*18, 24+Math.sin(a)*18); g.strokePath(); }
-          g.fillStyle(0x27ae60, 1); g.fillEllipse(24, 7, 8, 6);
-          g.fillStyle(0xffffff, 0.25); g.fillEllipse(16, 16, 7, 9);
+          g.fillStyle(0xe67e22, 1); g.fillCircle(22, 24, 17);
+          g.lineStyle(1.5, 0xd35400, 0.35);
+          for (let i = 0; i < 6; i++) {
+            const a = i * Math.PI / 3;
+            g.beginPath(); g.moveTo(22, 24);
+            g.lineTo(22 + Math.cos(a) * 16, 24 + Math.sin(a) * 16);
+            g.strokePath();
+          }
+          g.fillStyle(0x27ae60, 1); g.fillEllipse(22, 8, 10, 7);
+          g.lineStyle(1, 0x1e8449, 0.7); g.beginPath(); g.moveTo(22, 5); g.lineTo(22, 11); g.strokePath();
+          g.fillStyle(0xffffff, 0.25); g.fillEllipse(14, 17, 6, 8);
+          g.lineStyle(2, 0x1a2e1a, 0.9); g.strokeCircle(22, 24, 17);
         },
       },
       {
         key: "strawberry", healthy: true,
         draw: (g) => {
           g.fillStyle(0xe74c3c, 1);
-          g.fillTriangle(24, 40, 8, 16, 40, 16);
-          g.fillStyle(0xe74c3c, 1); g.fillCircle(16, 18, 9); g.fillCircle(32, 18, 9); g.fillCircle(24, 14, 8);
-          g.fillStyle(0xffffff, 1);
-          for (const [sx,sy] of [[18,24],[28,20],[22,32],[30,28]]) g.fillCircle(sx,sy,2.5);
-          g.fillStyle(0x27ae60, 1); g.fillEllipse(18, 11, 10, 7); g.fillEllipse(24, 8, 8, 5); g.fillEllipse(30, 11, 10, 7);
+          g.fillPoints([
+            { x: 22, y: 40 }, { x: 12, y: 32 }, { x: 7, y: 22 }, { x: 8, y: 14 },
+            { x: 14, y: 10 }, { x: 22, y: 12 },
+            { x: 30, y: 10 }, { x: 36, y: 14 },
+            { x: 37, y: 22 }, { x: 32, y: 32 },
+          ], true);
+          g.fillStyle(0xf1948a, 0.35); g.fillEllipse(15, 21, 7, 12);
+          g.fillStyle(0xffffff, 0.9);
+          for (const [sx, sy] of [[18, 22], [26, 20], [22, 30], [15, 28], [29, 27], [21, 37]]) {
+            g.fillCircle(sx, sy, 1.5);
+          }
+          g.fillStyle(0x27ae60, 1);
+          g.fillEllipse(16, 11, 10, 7); g.fillEllipse(22, 8, 8, 6); g.fillEllipse(28, 11, 10, 7);
+          g.lineStyle(2, 0x1a2e1a, 0.9);
+          g.beginPath();
+          g.moveTo(22, 40); g.lineTo(12, 32); g.lineTo(7, 22); g.lineTo(8, 14);
+          g.lineTo(14, 10); g.lineTo(22, 12); g.lineTo(30, 10); g.lineTo(36, 14);
+          g.lineTo(37, 22); g.lineTo(32, 32);
+          g.closePath(); g.strokePath();
         },
       },
-      // ── UNHEALTHY ──────────────────────────────────────────────────────────
+      // ── UNHEALTHY — warm rich colors, golden glow, dark warm outline ────────
       {
         key: "burger", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(6, 5, 36, 13, 6);
-          g.fillStyle(0x27ae60, 1); g.fillRect(8, 17, 32, 4);
-          g.fillStyle(0xe74c3c, 1); g.fillRect(8, 21, 32, 4);
-          g.fillStyle(0xf39c12, 1); g.fillRect(8, 25, 32, 4);
-          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(6, 28, 36, 13, 5);
-          g.fillStyle(0xf1c40f, 0.6); g.fillRect(10, 27, 6, 2); g.fillRect(20, 27, 6, 2); g.fillRect(30, 27, 6, 2);
+          // Top bun
+          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(5, 3, 34, 12, 6);
+          // Sesame seeds
+          g.fillStyle(0xfaf0d7, 1);
+          g.fillEllipse(13, 7, 5, 3); g.fillEllipse(22, 5, 5, 3); g.fillEllipse(31, 7, 5, 3);
+          // Bun highlight
+          g.fillStyle(0xe8bf77, 0.3); g.fillEllipse(22, 6, 26, 5);
+          // Lettuce
+          g.fillStyle(0x27ae60, 1); g.fillRect(5, 14, 34, 4);
+          g.fillStyle(0x58d68d, 0.5); g.fillRect(7, 14, 10, 2); g.fillRect(24, 14, 10, 2);
+          // Tomato
+          g.fillStyle(0xe74c3c, 1); g.fillRect(5, 18, 34, 3);
+          // Cheese
+          g.fillStyle(0xf39c12, 1); g.fillRect(5, 21, 34, 3);
+          // Patty
+          g.fillStyle(0x7d4f25, 1); g.fillRoundedRect(6, 24, 32, 5, 2);
+          // Bottom bun
+          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(5, 29, 34, 12, 5);
+          // Outlines
+          g.lineStyle(2, 0x3d1a00, 0.9);
+          g.strokeRoundedRect(5, 3, 34, 12, 6);
+          g.strokeRoundedRect(5, 29, 34, 12, 5);
         },
       },
       {
         key: "pizza", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xf39c12, 1); g.fillTriangle(24, 4, 4, 44, 44, 44);
-          g.fillStyle(0xe74c3c, 1); g.fillTriangle(24, 10, 8, 40, 40, 40);
-          g.fillStyle(0xf1c40f, 1); g.fillCircle(17, 28, 5); g.fillCircle(30, 32, 4); g.fillCircle(23, 22, 4);
-          g.fillStyle(0xd35400, 0.4); g.lineStyle(2, 0xd35400, 0.4);
-          g.beginPath(); g.moveTo(24,10); g.lineTo(24,40); g.strokePath();
+          // Crust
+          g.fillStyle(0xd4a35a, 1); g.fillTriangle(22, 3, 2, 42, 42, 42);
+          // Sauce
+          g.fillStyle(0xc0392b, 1); g.fillTriangle(22, 9, 6, 39, 38, 39);
+          // Cheese
+          g.fillStyle(0xf39c12, 0.85); g.fillTriangle(22, 13, 10, 36, 34, 36);
+          // Pepperoni
+          g.fillStyle(0x922b21, 1);
+          g.fillCircle(22, 26, 5); g.fillCircle(15, 33, 4); g.fillCircle(29, 33, 4);
+          g.fillStyle(0xc0392b, 0.5);
+          g.fillCircle(21, 25, 2); g.fillCircle(14, 32, 1.5); g.fillCircle(28, 32, 1.5);
+          // Outline
+          g.lineStyle(2, 0x3d1a00, 0.9);
+          g.beginPath(); g.moveTo(22, 3); g.lineTo(2, 42); g.lineTo(42, 42); g.closePath(); g.strokePath();
         },
       },
       {
         key: "donut", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xf4a7b9, 1); g.fillCircle(24, 24, 20);
-          g.fillStyle(0x1a1a2e, 0); g.fillStyle(0xfdf6e3, 1); g.fillCircle(24, 24, 9);
-          g.fillStyle(0xff6b9d, 1);
-          for (let i = 0; i < 7; i++) { g.fillRect(11 + i * 2.8, 16, 2.2, 3); g.fillRect(11 + i * 2.8, 28, 2.2, 3); }
+          // Dough ring
+          g.fillStyle(0xc47c3e, 1); g.fillCircle(22, 22, 18);
+          // Pink icing (shifted slightly up for a glaze effect)
+          g.fillStyle(0xf4a7b9, 1); g.fillCircle(22, 19, 15);
+          // Hole
+          g.fillStyle(0x2a1005, 1); g.fillCircle(22, 22, 8);
+          // Sprinkles
+          g.fillStyle(0xff4499, 1); g.fillRect(14, 15, 6, 2);
+          g.fillStyle(0x4499ff, 1); g.fillRect(26, 12, 2, 6);
+          g.fillStyle(0xffcc00, 1); g.fillRect(29, 19, 6, 2);
+          g.fillStyle(0x44cc44, 1); g.fillRect(16, 26, 2, 6);
+          g.fillStyle(0xff6600, 1); g.fillRect(10, 20, 2, 6);
+          g.lineStyle(2, 0x3d1a00, 0.9); g.strokeCircle(22, 22, 18);
         },
       },
       {
         key: "cake", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xf4a7b9, 1); g.fillRoundedRect(6, 20, 36, 22, 4);
-          g.fillStyle(0xfdf6e3, 1); g.fillRect(6, 20, 36, 5);
-          g.fillStyle(0xff6b9d, 1); for (let i=0;i<3;i++) g.fillRect(10+i*11,14,5,9);
-          g.fillStyle(0xf1c40f, 1); g.fillCircle(12,12,4); g.fillCircle(24,10,4); g.fillCircle(36,12,4);
-          g.fillStyle(0xffffff, 0.3); g.fillRect(8, 22, 32, 2);
+          // Bottom layer
+          g.fillStyle(0xf4a7b9, 1); g.fillRoundedRect(5, 27, 34, 13, 3);
+          // Cream stripe between layers
+          g.fillStyle(0xfdf6e3, 1); g.fillRect(5, 25, 34, 3);
+          // Top layer
+          g.fillStyle(0xf4a7b9, 1); g.fillRoundedRect(7, 16, 30, 10, 3);
+          // Top icing
+          g.fillStyle(0xfdf6e3, 1); g.fillRect(7, 14, 30, 3);
+          // Frosting blobs
+          g.fillStyle(0xff6b9d, 1);
+          for (let i = 0; i < 4; i++) g.fillCircle(11 + i * 8, 14, 3);
+          // Candles
+          g.fillStyle(0xf1c40f, 1); g.fillRect(12, 6, 3, 9); g.fillRect(21, 6, 3, 9); g.fillRect(30, 6, 3, 9);
+          // Flames
+          g.fillStyle(0xff6600, 1); g.fillCircle(13, 5, 3); g.fillCircle(22, 5, 3); g.fillCircle(31, 5, 3);
+          g.fillStyle(0xffff00, 0.7); g.fillCircle(13, 5, 1.5); g.fillCircle(22, 5, 1.5); g.fillCircle(31, 5, 1.5);
+          g.lineStyle(2, 0x3d1a00, 0.9);
+          g.strokeRoundedRect(5, 27, 34, 13, 3);
+          g.strokeRoundedRect(7, 16, 30, 10, 3);
         },
       },
       {
         key: "hotdog", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(4, 14, 40, 20, 10);
-          g.fillStyle(0xe74c3c, 1); g.fillRoundedRect(8, 16, 32, 16, 8);
-          g.fillStyle(0xf1c40f, 1);
-          g.lineStyle(2, 0xf1c40f, 1); g.beginPath(); g.moveTo(10,20); g.lineTo(38,20); g.strokePath();
-          g.beginPath(); g.moveTo(10,28); g.lineTo(38,28); g.strokePath();
+          // Bun
+          g.fillStyle(0xd4a35a, 1); g.fillRoundedRect(3, 12, 38, 20, 10);
+          // Sausage
+          g.fillStyle(0xc0392b, 1); g.fillRoundedRect(4, 15, 36, 14, 7);
+          // Dark sausage ends
+          g.fillStyle(0x922b21, 1); g.fillCircle(7, 22, 6); g.fillCircle(37, 22, 6);
+          // Mustard zigzag
+          g.lineStyle(3, 0xf1c40f, 1);
+          g.beginPath(); g.moveTo(8, 22);
+          g.lineTo(13, 18); g.lineTo(18, 26); g.lineTo(23, 18);
+          g.lineTo(28, 26); g.lineTo(33, 18); g.lineTo(38, 22);
+          g.strokePath();
+          // Bun highlight
+          g.fillStyle(0xe8bf77, 0.35); g.fillEllipse(22, 15, 30, 5);
+          g.lineStyle(2, 0x3d1a00, 0.9); g.strokeRoundedRect(3, 12, 38, 20, 10);
         },
       },
       {
         key: "icecream", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xd4a35a, 1); g.fillTriangle(24, 44, 10, 24, 38, 24);
-          g.fillStyle(0xf8c9d4, 1); g.fillCircle(24, 20, 14);
-          g.fillStyle(0xff6b9d, 1); g.fillCircle(24, 10, 8);
-          g.fillStyle(0xff2255, 1); g.fillCircle(24, 4, 4);
-          g.fillStyle(0xffffff, 0.3); g.fillEllipse(18, 16, 5, 8);
+          // Waffle cone
+          g.fillStyle(0xd4a35a, 1); g.fillTriangle(22, 44, 10, 24, 34, 24);
+          // Cone grid lines (horizontal, tapering to tip)
+          g.lineStyle(1.5, 0xb8834e, 0.6);
+          for (let i = 0; i < 4; i++) {
+            const y1 = 24 + i * 5;
+            const halfW = 12 * (1 - (y1 - 24) / 20);
+            g.beginPath(); g.moveTo(22 - halfW, y1); g.lineTo(22 + halfW, y1); g.strokePath();
+          }
+          // Main cream scoop
+          g.fillStyle(0xf8e4c0, 1); g.fillCircle(22, 20, 13);
+          // Second smaller scoop
+          g.fillStyle(0xfce8d0, 1); g.fillCircle(22, 10, 9);
+          // Chocolate drip on scoop
+          g.fillStyle(0x5d2e0c, 0.7);
+          g.fillPoints([{ x: 28, y: 19 }, { x: 30, y: 26 }, { x: 28, y: 26 }, { x: 26, y: 19 }], true);
+          // Cherry
+          g.fillStyle(0xe74c3c, 1); g.fillCircle(22, 4, 4);
+          g.lineStyle(2, 0x6b3f00, 1); g.beginPath(); g.moveTo(22, 7); g.lineTo(22, 12); g.strokePath();
+          // Scoop highlight
+          g.fillStyle(0xffffff, 0.3); g.fillEllipse(16, 17, 5, 8);
+          // Outline cone and main scoop
+          g.lineStyle(2, 0x3d1a00, 0.9);
+          g.beginPath(); g.moveTo(22, 44); g.lineTo(10, 24); g.lineTo(34, 24); g.closePath(); g.strokePath();
+          g.strokeCircle(22, 20, 13);
         },
       },
       {
         key: "fries", healthy: false,
         draw: (g) => {
-          g.fillStyle(0xe74c3c, 1); g.fillRoundedRect(8, 22, 32, 22, 4);
-          g.fillStyle(0xfdf6e3, 1); g.fillRect(10, 23, 30, 3);
+          // 4 golden fries (drawn before the box so box overlaps their bases)
           g.fillStyle(0xf1c40f, 1);
-          for (let i = 0; i < 5; i++) g.fillRoundedRect(10 + i * 6, 6, 4, 18, 2);
-          g.fillStyle(0xf39c12, 0.6);
-          for (let i = 0; i < 5; i++) g.fillRect(12 + i * 6, 6, 1, 18);
+          g.fillRoundedRect(10, 6, 5, 22, 2);
+          g.fillRoundedRect(17, 4, 5, 24, 2);
+          g.fillRoundedRect(24, 6, 5, 22, 2);
+          g.fillRoundedRect(31, 8, 5, 20, 2);
+          // Fry shadow (right edge)
+          g.fillStyle(0xe0a800, 0.5);
+          g.fillRect(13, 6, 2, 22); g.fillRect(20, 4, 2, 24);
+          g.fillRect(27, 6, 2, 22); g.fillRect(34, 8, 2, 20);
+          // Salt dots
+          g.fillStyle(0xffffff, 0.85);
+          g.fillCircle(13, 9, 1.5); g.fillCircle(20, 7, 1.5); g.fillCircle(27, 10, 1.5);
+          // Red box
+          g.fillStyle(0xc0392b, 1); g.fillRoundedRect(7, 26, 30, 16, 3);
+          // White stripe on box
+          g.fillStyle(0xffffff, 0.75); g.fillRect(9, 28, 26, 2);
+          g.lineStyle(2, 0x3d1a00, 0.9); g.strokeRoundedRect(7, 26, 30, 16, 3);
         },
       },
       {
         key: "candy", healthy: false,
         draw: (g) => {
-          g.fillStyle(0x4a2f00, 1); g.fillRect(22, 8, 4, 20);
-          g.fillStyle(0xe74c3c, 1); g.fillCircle(24, 32, 14);
-          g.fillStyle(0xffffff, 1);
+          // Stick
+          g.fillStyle(0x7d5a00, 1); g.fillRoundedRect(20, 7, 4, 26, 2);
+          // Candy body
+          g.fillStyle(0xe74c3c, 1); g.fillCircle(22, 31, 12);
+          // White swirl wedges (4 alternating sectors)
+          g.fillStyle(0xffffff, 0.9);
           for (let i = 0; i < 4; i++) {
-            const a = i * (Math.PI / 2) + Math.PI / 4;
-            g.fillRect(24 + Math.cos(a) * 4 - 2, 32 + Math.sin(a) * 4 - 7, 4, 8);
+            const a1 = i * (Math.PI / 2);
+            const a2 = a1 + Math.PI / 4;
+            const mid = (a1 + a2) / 2;
+            g.fillPoints([
+              { x: 22, y: 31 },
+              { x: 22 + Math.cos(a1) * 12, y: 31 + Math.sin(a1) * 12 },
+              { x: 22 + Math.cos(mid) * 12, y: 31 + Math.sin(mid) * 12 },
+              { x: 22 + Math.cos(a2) * 12, y: 31 + Math.sin(a2) * 12 },
+            ], true);
           }
-          g.fillStyle(0xe74c3c, 0.6); g.fillCircle(24, 32, 5);
+          // Center dot
+          g.fillStyle(0xc0392b, 1); g.fillCircle(22, 31, 4);
+          g.lineStyle(2, 0x3d1a00, 0.9); g.strokeCircle(22, 31, 12);
         },
       },
     ];
 
+    // Warm golden glow for unhealthy foods (drawn before the food shape)
+    const addGlow = (g: Phaser.GameObjects.Graphics) => {
+      g.fillStyle(0xf39c12, 0.08); g.fillCircle(22, 22, 22);
+      g.fillStyle(0xf1c40f, 0.16); g.fillCircle(22, 22, 18);
+      g.fillStyle(0xffcc44, 0.25); g.fillCircle(22, 22, 13);
+    };
+
     foods.forEach(({ key, healthy, draw }) => {
       const g = this.make.graphics({ x: 0, y: 0 }, false);
+      if (!healthy) addGlow(g);
       draw(g);
-
-      // Border: green for healthy, orange-red for unhealthy
-      if (healthy) {
-        g.lineStyle(3, 0x27ae60, 0.85);
-      } else {
-        g.lineStyle(3, 0xe67e22, 0.9);
-      }
-      g.strokeCircle(24, 24, 22);
-
       g.generateTexture(key, SIZE, SIZE);
       g.destroy();
     });

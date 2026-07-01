@@ -137,7 +137,11 @@ export class Blob {
               this.stage = finalStage;
               this.physics.resize(width, height);
               const scaleRatio = oldW / width;
-              this.visual.play(`blob_idle_${finalStage}`, true);
+              // If stressed, go straight to stress anim — skip the brief idle/smile
+              const postBurpKey = this.isStressed
+                ? `blob_stress_${finalStage}`
+                : `blob_idle_${finalStage}`;
+              this.visual.play(postBurpKey, true);
               this.visual.setScale(scaleRatio);
               this.scene.tweens.add({
                 targets: this.visual,
@@ -166,7 +170,7 @@ export class Blob {
     const bubble = this.scene.add.text(x, y, "burp!", {
       fontSize: `${fontSize}px`,
       color: "#f1c40f",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       fontStyle: "bold",
       stroke: "#1a1a2e",
       strokeThickness: 2,
@@ -257,12 +261,17 @@ export class Blob {
     const cur = this.visual.anims.currentAnim?.key ?? "";
 
     if (!onGround) {
-      const airKey = vy > 0 ? `blob_fall_${s}` : `blob_jump_${s}`;
-      if (!cur.startsWith("blob_jump") && !cur.startsWith("blob_fall")) {
-        this.visual.play(airKey, true);
+      if (this.isStressed) {
+        const stressKey = `blob_stress_${s}`;
+        if (!cur.startsWith(stressKey)) this.visual.play(stressKey, true);
+      } else {
+        const airKey = vy > 0 ? `blob_fall_${s}` : `blob_jump_${s}`;
+        if (!cur.startsWith("blob_jump") && !cur.startsWith("blob_fall")) {
+          this.visual.play(airKey, true);
+        }
       }
     } else if (Math.abs(vx) > 10) {
-      const walkKey = `blob_walk_${s}`;
+      const walkKey = this.isStressed ? `blob_stress_${s}` : `blob_walk_${s}`;
       if (!cur.startsWith(walkKey)) this.visual.play(walkKey, true);
     } else {
       const idleKey = this.isStressed ? `blob_stress_${s}` : `blob_idle_${s}`;

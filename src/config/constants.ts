@@ -1,5 +1,7 @@
-export const GAME_WIDTH  = 1920;
-export const GAME_HEIGHT = 1080;
+export const GAME_WIDTH       = 1920;
+export const GAME_HEIGHT      = 1080;
+export const GAME_PLAY_HEIGHT = GAME_HEIGHT - 120; // 960 — screen px for the game world; bottom 120px reserved for dock
+
 
 export const TILE_SIZE = 32;
 

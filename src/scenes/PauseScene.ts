@@ -15,7 +15,7 @@ export class PauseScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 220, "PAUSED", {
       fontSize: "120px",
       color: "#ffffff",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000",
       strokeThickness: 8,
     }).setOrigin(0.5);
@@ -24,7 +24,7 @@ export class PauseScene extends Phaser.Scene {
     const resume = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, "[ R ] Resume", {
       fontSize: "60px",
       color: "#6fdc8c",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000",
       strokeThickness: 5,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -40,7 +40,7 @@ export class PauseScene extends Phaser.Scene {
     const menu = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 160, "[ M ] Main Menu", {
       fontSize: "48px",
       color: "#a0aec0",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000",
       strokeThickness: 4,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -54,7 +54,7 @@ export class PauseScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 290, "ESC also resumes", {
       fontSize: "28px",
       color: "#4a5568",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
     // Keyboard

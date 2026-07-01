@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
+import { GAME_WIDTH, GAME_HEIGHT, GAME_PLAY_HEIGHT, SHRINK_COOLDOWN_MS, STRESS_THRESHOLD } from "../config/constants";
 import type { StageIndex } from "../config/constants";
 import { LEVELS, getFoodGrowth, getFoodScore, getFoodCategory } from "../config/levels";
 import { SizeSystem } from "../systems/SizeSystem";
@@ -30,6 +30,7 @@ export class GameScene extends Phaser.Scene {
   private mashKeyX!: Phaser.Input.Keyboard.Key;
   private lastMashTimeZ = 0;
   private lastMashTimeX = 0;
+  private lastMashKey: "Z" | "X" | null = null;
   // Tutorial progressive hints
   private tutHints: Map<string, Phaser.GameObjects.Text> = new Map();
   private tutShown: Set<string> = new Set();
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.exitLocked = false;
     this.lastMashTimeZ = 0;
     this.lastMashTimeX = 0;
+    this.lastMashKey   = null;
     this.tutHints.clear();
     this.tutShown.clear();
   }
@@ -81,7 +83,9 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, levelWidth, levelHeight);
     // Zoom so the level fills the canvas vertically without changing any geometry
-    this.cameras.main.setZoom(GAME_HEIGHT / levelHeight);
+    // Restrict the camera viewport to the play area, leaving the bottom 120px clear for the dock
+    this.cameras.main.setViewport(0, 0, GAME_WIDTH, GAME_PLAY_HEIGHT);
+    this.cameras.main.setZoom(GAME_PLAY_HEIGHT / levelHeight);
     this.cameras.main.startFollow(this.blob.visual, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(240, 160);
 
@@ -154,7 +158,7 @@ export class GameScene extends Phaser.Scene {
       this.lockLabel = this.add.text(
         exitZone.x, exitZone.y - 56,
         `🔒 LOCKED\n${levelCfg.scoreThreshold} pts needed`,
-        { fontSize: "18px", color: "#e74c3c", fontFamily: "monospace", stroke: "#000", strokeThickness: 4, align: "center" }
+        { fontSize: "18px", color: "#e74c3c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 4, align: "center" }
       ).setOrigin(0.5).setDepth(5);
     }
 
@@ -234,7 +238,7 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = this.blob.visual;
     const pop = this.add.text(x, y - 30, popText, {
       fontSize: "17px", color: popColor,
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 2,
     }).setOrigin(0.5).setDepth(5);
     this.tweens.add({
@@ -288,9 +292,14 @@ export class GameScene extends Phaser.Scene {
 
     const now = Date.now();
     const lastTime = key === "Z" ? this.lastMashTimeZ : this.lastMashTimeX;
-    if (now - lastTime < 100) return; // per-key cooldown
-    if (key === "Z") this.lastMashTimeZ = now;
-    else             this.lastMashTimeX = now;
+    // Same key repeated: throttled to once per 400ms.
+    // Alternate key: always immediately active (cooldown reset when the other key fires).
+    const cooldown = this.lastMashKey === key ? 400 : 0;
+    if (now - lastTime < cooldown) return;
+    // Record this press and immediately unlock the OTHER key.
+    if (key === "Z") { this.lastMashTimeZ = now; this.lastMashTimeX = 0; }
+    else             { this.lastMashTimeX = now; this.lastMashTimeZ = 0; }
+    this.lastMashKey = key;
 
     const stage = this.sizeSystem.getStage();
     const baseReduction = Math.max(40, Math.floor(220 / (1 + stage * 0.5)));
@@ -353,9 +362,9 @@ export class GameScene extends Phaser.Scene {
     // Process at most one food per frame to avoid double-eat edge cases.
     for (const food of this.foods) {
       if (!food.sprite.active) continue;
-      const fx = food.sprite.x - 24;
-      const fy = food.sprite.y - 24;
-      if (this.blob.physics.overlapsRect(fx, fy, 48, 48)) {
+      const fx = food.sprite.x - 22;
+      const fy = food.sprite.y - 22;
+      if (this.blob.physics.overlapsRect(fx, fy, 44, 44)) {
         this.eatFood(food);
         break;
       }
@@ -389,7 +398,7 @@ export class GameScene extends Phaser.Scene {
     const FLOOR = 528;
     const add = (key: string, x: number, y: number, text: string, color = "#e0e0e0") => {
       const t = this.add.text(x, y, text, {
-        fontSize: "14px", color, fontFamily: "monospace",
+        fontSize: "14px", color, fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
         stroke: "#000", strokeThickness: 3, align: "center",
       }).setOrigin(0.5).setAlpha(0).setDepth(1);
       this.tutHints.set(key, t);

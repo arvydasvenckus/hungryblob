@@ -34,7 +34,7 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 210, title, {
       fontSize: "104px",
       color: titleColor,
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000",
       strokeThickness: 8,
     }).setOrigin(0.5);
@@ -42,7 +42,7 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 384, `SCORE: ${score}`, {
       fontSize: "72px",
       color: "#f1c40f",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000",
       strokeThickness: 6,
     }).setOrigin(0.5);
@@ -75,7 +75,7 @@ export class ResultScene extends Phaser.Scene {
         `[ N ] Next Level: ${nextName}`, {
           fontSize: "48px",
           color: "#6fdc8c",
-          fontFamily: "monospace",
+          fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
           stroke: "#000000",
           strokeThickness: 5,
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -89,7 +89,7 @@ export class ResultScene extends Phaser.Scene {
       const retry = this.add.text(GAME_WIDTH / 2, 760, "[ ENTER ] Try Again", {
         fontSize: "44px",
         color: "#6fdc8c",
-        fontFamily: "monospace",
+        fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
         stroke: "#000000",
         strokeThickness: 5,
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -105,7 +105,7 @@ export class ResultScene extends Phaser.Scene {
       const again = this.add.text(GAME_WIDTH / 2, 850, "[ R ] Play Again", {
         fontSize: "36px",
         color: "#718096",
-        fontFamily: "monospace",
+        fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       again.on("pointerup",   () => go(() => this.restart()));
       again.on("pointerdown", () => go(() => this.restart()));
@@ -115,7 +115,7 @@ export class ResultScene extends Phaser.Scene {
     const menu = this.add.text(GAME_WIDTH / 2, hasNextLevel ? 910 : 850, "[ M ] Main Menu", {
       fontSize: "36px",
       color: "#a0aec0",
-      fontFamily: "monospace",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     menu.on("pointerup",   () => go(() => this.goMenu()));

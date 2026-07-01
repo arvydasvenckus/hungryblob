@@ -39,9 +39,9 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x1a1a2e, 1);
+  bg.fillStyle(0x1c1208, 1);
   bg.fillRect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
-  drawBgDetails(bg);
+  drawRestaurantKitchenBg(bg, LEVEL_WIDTH, LEVEL_HEIGHT);
 
   // ── Wall / platform helper ─────────────────────────────────────────────────
   function wall(x: number, y: number, w: number, h: number) {
@@ -139,7 +139,7 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
 
   // ── Exit label only — all other hints are managed by GameScene (progressive disclosure)
   scene.add.text(exitX + T * 0.75, exitY - 22, "EXIT ▼", {
-    fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+    fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2,
   }).setOrigin(0.5);
 
   return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL_WIDTH, levelHeight: LEVEL_HEIGHT };
@@ -188,9 +188,9 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x2c1810, 1);
+  bg.fillStyle(0x0e1218, 1);
   bg.fillRect(0, 0, LEVEL2_WIDTH, LEVEL2_HEIGHT);
-  drawKitchenBg(bg, LEVEL2_WIDTH, LEVEL2_HEIGHT);
+  drawSupermarketBg(bg, LEVEL2_WIDTH, LEVEL2_HEIGHT);
 
   // ── Wall helper ─────────────────────────────────────────────────────────────
   function wall2(x: number, y: number, w: number, h: number, isRaised = false) {
@@ -317,7 +317,7 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
 
   // ── Hints ─────────────────────────────────────────────────────────────────
   const hs: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: "13px", color: "#c9956a", fontFamily: "monospace",
+    fontSize: "13px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     stroke: "#000", strokeThickness: 2, align: "center",
   };
   scene.add.text(360, FLOOR2 - 68, "Squeeze! →",        { ...hs }).setOrigin(0, 0.5);
@@ -325,51 +325,202 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   scene.add.text(1060, FLOOR2 - 68, "Go high for bonus →", { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
   scene.add.text(1910, FLOOR2 - 68, "Big squeeze →",    { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T2 * 0.75, exitY - 22, "EXIT ▼",
-    { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 })
+    { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
 
   return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL2_WIDTH, levelHeight: LEVEL2_HEIGHT };
 }
 
-function drawKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
-  // Tile-like wall pattern (kitchen tiles)
-  g.lineStyle(1, 0x3d2418, 0.5);
-  for (let x = 0; x < w; x += 48) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.strokePath();
-  }
-  for (let y = 0; y < h; y += 48) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+// ─── Theme: Restaurant Kitchen (Tutorial) ───────────────────────────────────
+function drawRestaurantKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+  const T = TILE_SIZE;
+
+  // Upper section — slightly lighter warm tone to suggest wall depth
+  g.fillStyle(0x241810, 1); g.fillRect(0, 0, w, Math.round(h * 0.57));
+
+  // Pot rail along ceiling
+  g.fillStyle(0x3d2a1a, 1); g.fillRect(0, T, w, 8);
+  g.fillStyle(0x5a3d22, 0.5); g.fillRect(0, T, w, 2); // top highlight
+
+  // Warm overhead glow — one per 240px from rail
+  for (let x = 120; x < w; x += 240) {
+    g.fillStyle(0xc04800, 0.03); g.fillEllipse(x, T, 210, 150);
+    g.fillStyle(0xe06010, 0.025); g.fillEllipse(x, T, 100, 80);
   }
 
-  // Hanging pots / pans silhouettes at ceiling
-  for (let x = 120; x < w - 80; x += 260) {
-    // Pan
-    g.fillStyle(0x1a0f0a, 0.7);
-    g.fillEllipse(x, 55, 44, 28);
-    g.fillRect(x + 20, 48, 28, 6); // handle
-    // Pot next to it
-    g.fillStyle(0x1a0f0a, 0.6);
-    g.fillRoundedRect(x + 80, 40, 32, 30, 4);
-    g.fillRect(x + 74, 48, 10, 6);  // left handle
-    g.fillRect(x + 112, 48, 10, 6); // right handle
-  }
-
-  // Steam wisps rising from floor level
-  g.lineStyle(1.5, 0x8b6b50, 0.2);
-  for (let x = 200; x < w - 100; x += 350) {
-    for (let i = 0; i < 3; i++) {
-      g.beginPath();
-      const sx = x + i * 20;
-      g.moveTo(sx, h - 60);
-      g.lineTo(sx + 8, h - 120);
-      g.lineTo(sx - 4, h - 180);
-      g.strokePath();
+  // Hanging pots / pans — alternating shapes every 240px
+  for (let x = 120; x < w - 60; x += 240) {
+    g.fillStyle(0x1e1208, 0.85);
+    if (((x / 240) | 0) % 2 === 0) {
+      // Pot — round body, two side handles
+      g.fillRect(x - 3, T + 8, 6, 40);                          // rod
+      g.fillRoundedRect(x - 22, T + 48, 44, 38, 5);             // body
+      g.fillRect(x - 32, T + 62, 12, 8);                        // left handle
+      g.fillRect(x + 20, T + 62, 12, 8);                        // right handle
+      g.fillStyle(0x2e1e0e, 0.5); g.fillRect(x - 22, T + 48, 44, 4); // rim
+    } else {
+      // Pan — elliptical disc, long handle extending right
+      g.fillRect(x - 3, T + 8, 6, 36);                          // rod
+      g.fillEllipse(x, T + 58, 52, 28);                         // pan face
+      g.fillRect(x + 22, T + 52, 40, 9);                        // handle
     }
   }
 
-  // Counter-top / shelf line near floor
-  g.fillStyle(0x5c3d26, 0.4);
-  g.fillRect(0, h - 70, w, 6);
+  // Wall tile grid
+  g.lineStyle(1, 0x3d2618, 0.38);
+  for (let x = 0; x <= w; x += 56) {
+    g.beginPath(); g.moveTo(x, T); g.lineTo(x, h - 80); g.strokePath();
+  }
+  for (let y = T; y < h - 80; y += 56) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+  }
+
+  // Counter band near floor
+  g.fillStyle(0x2a1e12, 1); g.fillRect(0, h - 80, w, 80);
+  // Metallic counter-top edge
+  g.fillStyle(0x6a4a30, 0.6); g.fillRect(0, h - 81, w, 3);
+  g.fillStyle(0x4a3020, 0.35); g.fillRect(0, h - 78, w, 2);
+  // Kick plate
+  g.fillStyle(0x120a04, 0.7); g.fillRect(0, h - 18, w, 18);
+
+  // Steam wisps (very subtle)
+  g.lineStyle(1.5, 0x7a5a38, 0.15);
+  for (let x = 320; x < w; x += 480) {
+    for (let i = 0; i < 3; i++) {
+      const sx = x + i * 18;
+      g.beginPath();
+      g.moveTo(sx, h - 80); g.lineTo(sx + 6, h - 130); g.lineTo(sx - 3, h - 180);
+      g.strokePath();
+    }
+  }
+}
+
+// ─── Theme: Supermarket (Level 1 — The Squeeze) ─────────────────────────────
+function drawSupermarketBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+  const T = TILE_SIZE;
+
+  // Ceiling band
+  g.fillStyle(0x0a0d12, 1); g.fillRect(0, 0, w, T + 18);
+
+  // Fluorescent light strip at ceiling line
+  g.fillStyle(0x1a2838, 0.9); g.fillRect(0, T, w, 5);
+
+  // Fluorescent glow — one pool per 280px
+  for (let x = 140; x < w; x += 280) {
+    g.fillStyle(0x8cb4e0, 0.04); g.fillEllipse(x, T, 300, 200);
+    g.fillStyle(0xaad0f4, 0.03); g.fillEllipse(x, T, 140, 100);
+    // Light housing tube
+    g.fillStyle(0x243448, 0.7); g.fillRect(x - 65, T + 2, 130, 4);
+  }
+
+  // Repeating shelf units — one per 320px
+  for (let sx = 0; sx < w; sx += 320) {
+    const rx  = sx + 50;
+    const rw  = 220;
+    const rh  = h - T - 18 - 64;
+
+    // Back panel
+    g.fillStyle(0x111c28, 1); g.fillRect(rx, T + 18, rw, rh);
+    // Side uprights
+    g.fillStyle(0x0e1820, 1);
+    g.fillRect(rx,           T + 18, 10, rh);
+    g.fillRect(rx + rw - 10, T + 18, 10, rh);
+    // Top cap
+    g.fillStyle(0x1c2c3c, 1); g.fillRect(rx, T + 14, rw, 5);
+
+    // 7 shelf boards with product silhouettes
+    const shelfStep = rh / 7;
+    for (let si = 0; si < 7; si++) {
+      const sy = T + 18 + si * shelfStep;
+      g.fillStyle(0x182434, 1); g.fillRect(rx + 10, sy, rw - 20, 8);
+
+      // Product boxes (4 per shelf, random heights)
+      for (let bi = 0; bi < 4; bi++) {
+        const bx = rx + 14 + bi * 50;
+        const bh = 28 + ((si * 4 + bi) * 13) % 26;
+        g.fillStyle(0x162030, 0.85); g.fillRect(bx, sy + 8, 42, bh);
+        // Subtle edge highlight
+        g.fillStyle(0x1e2c40, 0.45); g.fillRect(bx, sy + 8, 3, bh);
+      }
+    }
+  }
+
+  // Floor band
+  g.fillStyle(0x0c1016, 1); g.fillRect(0, h - 66, w, 66);
+  // Floor reflection edge
+  g.fillStyle(0x1a2838, 0.22); g.fillRect(0, h - 67, w, 3);
+  // Floor tile grid
+  g.lineStyle(1, 0x141e2a, 0.42);
+  for (let x = 0; x <= w; x += 100) {
+    g.beginPath(); g.moveTo(x, h - 66); g.lineTo(x, h); g.strokePath();
+  }
+  for (let y = h - 66; y <= h; y += 33) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+  }
+}
+
+// ─── Theme: Vinted Kitchen (Level 2 — Sewer Depths) ─────────────────────────
+// Vinted brand teal: #00b5a5
+function drawVintedKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+  const T    = TILE_SIZE;
+  const TEAL = 0x00b5a5;
+
+  // Ceiling band
+  g.fillStyle(0x0a1010, 1); g.fillRect(0, 0, w, T + 20);
+
+  // Teal brand glow from ceiling — one per 300px
+  for (let x = 150; x < w; x += 300) {
+    g.fillStyle(TEAL, 0.04); g.fillEllipse(x, T, 280, 210);
+    g.fillStyle(0x00c8b8, 0.03); g.fillEllipse(x, T, 130, 110);
+  }
+
+  // Upper cabinet / utensil rail
+  g.fillStyle(0x1e3030, 1); g.fillRect(0, T, w, 8);
+  g.fillStyle(TEAL, 0.25); g.fillRect(0, T, w, 2); // teal highlight
+
+  // Hanging utensils — three alternating shapes every 100px
+  for (let x = 80; x < w - 40; x += 100) {
+    g.fillStyle(0x142020, 0.88);
+    const v = (x / 100 | 0) % 3;
+    if (v === 0) {
+      // Spatula: rod + flat rectangular head
+      g.fillRect(x - 2, T + 8, 4, 50);
+      g.fillRoundedRect(x - 9, T + 58, 18, 22, 2);
+    } else if (v === 1) {
+      // Ladle: rod + circle bowl
+      g.fillRect(x - 2, T + 8, 4, 44);
+      g.fillCircle(x, T + 60, 11);
+    } else {
+      // Fork: rod + two tines
+      g.fillRect(x - 2, T + 8, 4, 54);
+      g.fillRect(x - 8, T + 8, 4, 22);
+      g.fillRect(x + 4, T + 8, 4, 22);
+    }
+  }
+
+  // Wall tile grid (teal-tinted lines)
+  g.lineStyle(1, 0x1e3232, 0.42);
+  for (let x = 0; x <= w; x += 56) {
+    g.beginPath(); g.moveTo(x, T); g.lineTo(x, h - 72); g.strokePath();
+  }
+  for (let y = T; y < h - 72; y += 56) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+  }
+
+  // Sparse teal accent tiles — one every 280px × 168px grid cell
+  for (let x = 56; x < w; x += 280) {
+    for (let y = T + 56; y < h - 72; y += 168) {
+      g.fillStyle(TEAL, 0.05); g.fillRect(x, y, 56, 56);
+    }
+  }
+
+  // Counter band near floor
+  g.fillStyle(0x1a2828, 1); g.fillRect(0, h - 74, w, 74);
+  // Teal counter-top edge
+  g.fillStyle(TEAL, 0.28); g.fillRect(0, h - 75, w, 3);
+  g.fillStyle(0x1e3838, 0.55); g.fillRect(0, h - 72, w, 2);
+  // Kick plate
+  g.fillStyle(0x0a1212, 0.9); g.fillRect(0, h - 20, w, 20);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -408,9 +559,21 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x0d1a0f, 1);
+  bg.setDepth(-10);
+  bg.fillStyle(0x0c1716, 1);
   bg.fillRect(0, 0, LEVEL3_WIDTH, LEVEL3_HEIGHT);
-  drawCaveBg(bg, LEVEL3_WIDTH, LEVEL3_HEIGHT);
+  drawVintedKitchenBg(bg, LEVEL3_WIDTH, LEVEL3_HEIGHT);
+
+  // Vinted logo — world-space background element (does not follow camera)
+  // Camera zoom ≈ 1.71×, so world-scale 0.42 → ~216px wide on screen
+  // Positioned in the upper-right area of the starting camera view
+  if (scene.textures.exists("vinted-logo")) {
+    scene.add.image(940, 50, "vinted-logo")
+      .setOrigin(0.5, 0)
+      .setScale(0.42)
+      .setAlpha(0.65)
+      .setDepth(-8); // above bg fill, below platforms and gameplay elements
+  }
 
   // ── Platform helper — dark stone-green sewer blocks ────────────────────────
   function wall3(x: number, y: number, w: number, h: number, raised = false) {
@@ -511,7 +674,7 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
 
   // ── Hint labels ────────────────────────────────────────────────────────────
   const hs: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: "13px", color: "#52c97a", fontFamily: "monospace",
+    fontSize: "13px", color: "#52c97a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     stroke: "#000", strokeThickness: 2, align: "center",
   };
   scene.add.text(420,  FLOOR3 - 68, "Climb up →",           { ...hs }).setOrigin(0, 0.5);
@@ -520,86 +683,9 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
   scene.add.text(1660, FLOOR3 - 68, "Tightest yet →",       { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(2470, FLOOR3 - 68, "Step up & squeeze →",  { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T3 * 0.75, exitY - 22, "EXIT ▼",
-    { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 })
+    { fontSize: "13px", color: "#2ecc71", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
 
   return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL3_WIDTH, levelHeight: LEVEL3_HEIGHT };
 }
 
-function drawCaveBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
-  const T3 = TILE_SIZE;
-  // Subtle drip grid
-  g.lineStyle(1, 0x1a3d22, 0.35);
-  for (let x = 0; x < w; x += 56) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.strokePath();
-  }
-  for (let y = 0; y < h; y += 80) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
-  }
-
-  // Stalactite silhouettes hanging from ceiling
-  for (let x = 80; x < w - 40; x += 140 + (x % 70)) {
-    const sh = 28 + (x % 5) * 8;
-    g.fillStyle(0x071209, 0.8);
-    g.fillTriangle(x, T3, x - 12, T3 + sh, x + 12, T3 + sh);
-    // Ice-drip tip glow
-    g.fillStyle(0x2e6b47, 0.3);
-    g.fillCircle(x, T3 + sh, 3);
-  }
-
-  // Bioluminescent fungus blobs on walls (left side)
-  for (let y = 100; y < h - 80; y += 110) {
-    g.fillStyle(0x1abc9c, 0.18);
-    g.fillCircle(28, y, 9);
-    g.fillStyle(0x27ae60, 0.12);
-    g.fillCircle(28, y, 16);
-  }
-  // Right side
-  for (let y = 140; y < h - 80; y += 110) {
-    g.fillStyle(0x1abc9c, 0.15);
-    g.fillCircle(w - 28, y, 9);
-    g.fillStyle(0x27ae60, 0.1);
-    g.fillCircle(w - 28, y, 16);
-  }
-
-  // Drip streaks on walls
-  g.lineStyle(1, 0x1a3d22, 0.4);
-  for (let x = 130; x < w - 80; x += 300 + (x % 60)) {
-    const dy = 60 + (x % 4) * 30;
-    g.beginPath();
-    g.moveTo(x, T3 + 8);
-    g.lineTo(x + 4, T3 + dy);
-    g.lineTo(x,     T3 + dy + 12);
-    g.strokePath();
-    // Drip pool dot
-    g.fillStyle(0x2e6b47, 0.22);
-    g.fillCircle(x, T3 + dy + 14, 4);
-  }
-
-  // Floor glow line (bioluminescent strip at floor level)
-  g.fillStyle(0x27ae60, 0.12);
-  g.fillRect(0, h - T3 - 4, w, 4);
-}
-
-function drawBgDetails(g: Phaser.GameObjects.Graphics) {
-  g.lineStyle(1, 0x16213e, 0.45);
-  for (let x = 0; x < LEVEL_WIDTH; x += 64) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, LEVEL_HEIGHT); g.strokePath();
-  }
-  for (let y = 0; y < LEVEL_HEIGHT; y += 64) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(LEVEL_WIDTH, y); g.strokePath();
-  }
-  for (let x = 120; x < LEVEL_WIDTH - 64; x += 180) {
-    g.fillStyle(0x16213e, 0.65);
-    g.fillRect(x, 36, 52, 26);
-    for (let i = 0; i < 4; i++) {
-      g.fillStyle(0x2d3748, 0.8);
-      g.fillRect(x + 4 + i * 11, 40, 7, 18);
-    }
-  }
-  g.fillStyle(0x4a5568, 0.4);
-  for (let y = 60; y < LEVEL_HEIGHT - 60; y += 80) {
-    g.fillCircle(20, y, 3);
-    g.fillCircle(LEVEL_WIDTH - 20, y, 3);
-  }
-}

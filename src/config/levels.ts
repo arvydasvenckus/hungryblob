@@ -108,8 +108,14 @@ export const LEVELS: LevelConfig[] = [
       // food center y = 420 - 24 = 396. No ceiling above at x=1080. Safe to grow ✓
       { x: 1080, y: 396, type: "watermelon" }, // +1; 50 pts. Requires jumping to mid lane.
 
+      // Zone 5: descending step A platform (x=1500–1640, top y=380) — open above, no ceiling
+      { x: 1570, y: 356, type: "strawberry" }, // +1; 50 pts
+
       // Zone 7 — final sprint bonus
       { x: 2400, y: 500, type: "orange"     }, // +1; 50 pts
+
+      // Zone 7 — second sprint bonus (50px after orange, open floor)
+      { x: 2700, y: 500, type: "grapes"     }, // +1; 50 pts
     ],
   },
 

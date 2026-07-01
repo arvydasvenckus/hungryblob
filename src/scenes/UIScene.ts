@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT, SIZE_STAGES, SHRINK_COOLDOWN_MS } from "../config/constants";
 
+
 // ─── Dock layout constants ───────────────────────────────────────────────────
 const DOCK_H       = 96;
 const DOCK_BOTTOM  = GAME_HEIGHT - 12;      // 1068
@@ -67,23 +68,24 @@ export class UIScene extends Phaser.Scene {
     this.currentFill    = 0;
     this.activeBubbles  = 0;
 
+
     const pad = 32;
 
     // ── Timer (top centre) ─────────────────────────────────────────────────
     this.timerText = this.add.text(GAME_WIDTH / 2, pad, "1:05", {
-      fontSize: "56px", color: "#ffffff", fontFamily: "monospace",
+      fontSize: "56px", color: "#ffffff", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
     }).setOrigin(0.5, 0);
 
     // ── Score (top left) ───────────────────────────────────────────────────
     this.scoreText = this.add.text(pad, pad, "Score: 0", {
-      fontSize: "40px", color: "#f1c40f", fontFamily: "monospace",
+      fontSize: "40px", color: "#f1c40f", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
     });
 
     // ── Goal indicator ─────────────────────────────────────────────────────
     this.goalText = this.add.text(pad, pad + 52, "", {
-      fontSize: "26px", color: "#e74c3c", fontFamily: "monospace",
+      fontSize: "26px", color: "#e74c3c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 3,
     }).setVisible(false);
 
@@ -98,7 +100,7 @@ export class UIScene extends Phaser.Scene {
 
     // ── Message overlay ────────────────────────────────────────────────────
     this.messageText = this.add.text(GAME_WIDTH / 2, 520, "", {
-      fontSize: "72px", color: "#ffffff", fontFamily: "monospace",
+      fontSize: "72px", color: "#ffffff", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 6, align: "center",
     }).setOrigin(0.5).setDepth(10).setVisible(false);
 
@@ -472,7 +474,7 @@ export class UIScene extends Phaser.Scene {
     g.strokeRoundedRect(-KW / 2 + 0.75, -KH / 2 + 0.75, KW - 1.5, KH - 1.5, R);
 
     const label = this.add.text(0, 0, letter, {
-      fontSize: "15px", color: "#888888", fontFamily: "monospace", fontStyle: "bold",
+      fontSize: "15px", color: "#888888", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, fontStyle: "bold",
     }).setOrigin(0.5);
 
     const container = this.add.container(x, y, [g, label]).setDepth(4).setAlpha(0);
@@ -501,7 +503,7 @@ export class UIScene extends Phaser.Scene {
     const glow = this.add.graphics().setDepth(20);
     const label = this.add.text(cx - r - 14, cy,
       "Bob's\ndigest\nmeter", {
-        fontSize: "22px", color: "#e67e22", fontFamily: "monospace",
+        fontSize: "22px", color: "#e67e22", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
         stroke: "#000", strokeThickness: 3, align: "right",
       }).setOrigin(1, 0.5).setAlpha(0).setDepth(20);
 

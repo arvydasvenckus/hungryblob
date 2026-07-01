@@ -35,12 +35,12 @@ export class MenuScene extends Phaser.Scene {
 
     // Title
     this.add.text(GAME_WIDTH / 2, 140, "HUNGRY BOB", {
-      fontSize: "130px", color: "#6fdc8c", fontFamily: "monospace",
+      fontSize: "130px", color: "#6fdc8c", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 10,
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 300, "eat. grow. squeeze.", {
-      fontSize: "40px", color: "#a0aec0", fontFamily: "monospace",
+      fontSize: "40px", color: "#a0aec0", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
     // Animated Bob preview
@@ -51,12 +51,12 @@ export class MenuScene extends Phaser.Scene {
 
     // Controls hint
     this.add.text(GAME_WIDTH / 2, 560, "← → move   ↑ / SPACE jump   ESC pause", {
-      fontSize: "28px", color: "#718096", fontFamily: "monospace",
+      fontSize: "28px", color: "#718096", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
     // ── Level selector ─────────────────────────────────────────────────────
     this.add.text(GAME_WIDTH / 2, 650, "─── SELECT LEVEL ───", {
-      fontSize: "30px", color: "#4a5568", fontFamily: "monospace",
+      fontSize: "30px", color: "#4a5568", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5);
 
     const CARD_W     = 300;
@@ -92,14 +92,14 @@ export class MenuScene extends Phaser.Scene {
       this.add.text(cx + CARD_W / 2, cy + 54, cfg.name, {
         fontSize: "30px",
         color: unlocked ? "#ffffff" : "#4a5568",
-        fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+        fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1, stroke: "#000", strokeThickness: 2,
       }).setOrigin(0.5);
 
       // Status
       const statusLabel = unlocked ? (savedLevel === i ? "PLAY  ▶" : "REPLAY") : "LOCKED";
       const statusColor = unlocked ? (savedLevel === i ? "#6fdc8c" : "#a0aec0") : "#4a5568";
       this.add.text(cx + CARD_W / 2, cy + 108, statusLabel, {
-        fontSize: "24px", color: statusColor, fontFamily: "monospace",
+        fontSize: "24px", color: statusColor, fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
         stroke: "#000", strokeThickness: 2,
       }).setOrigin(0.5);
 
@@ -136,7 +136,7 @@ export class MenuScene extends Phaser.Scene {
     // Navigation hint
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 50,
       "← → to select   ENTER to start", {
-        fontSize: "28px", color: "#4a5568", fontFamily: "monospace",
+        fontSize: "28px", color: "#4a5568", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       }).setOrigin(0.5);
 
     if (!this.sound.get("menumusic")?.isPlaying) {
