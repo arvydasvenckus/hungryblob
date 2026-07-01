@@ -170,24 +170,18 @@ export class UIScene extends Phaser.Scene {
     this.stageIconGfx.clear();
 
     // Base icon size = 40px for stage 0, grows +2px per stage up to stage 7 (54px).
-    // Icons are bottom-aligned so they grow upward from a common baseline.
-    const BASE_SZ  = 40;
-    const SZ_STEP  = 2;
-    const BASELINE = DOCK_CY + DOCK_H * 0.28; // shared bottom edge for all icons
-
-    // Recalculate icon x positions based on their individual sizes so they're
-    // evenly spaced using the average icon width as the slot width.
-    const SLOT_W = BASE_SZ + (STAGE_COUNT - 1) * SZ_STEP + ICON_GAP; // ~58px per slot
+    // Icons are center-aligned on DOCK_CY so they grow symmetrically.
+    const BASE_SZ = 40;
+    const SZ_STEP = 2;
 
     for (let i = 0; i < STAGE_COUNT; i++) {
       const sz = BASE_SZ + i * SZ_STEP;           // 40, 42, 44 … 54
       const r  = sz * 0.32;                        // corner radius scales with size
       const c  = STAGE_COLORS[i];
 
-      // Centre-of-slot x — slots are SLOT_W apart from ICONS_LEFT
-      const slotCx = ICONS_LEFT + i * (BASE_SZ + SZ_STEP + ICON_GAP) + (BASE_SZ + i * SZ_STEP) / 2;
-      // Bottom-align: top-left y = baseline - sz
-      const iy = BASELINE - sz;
+      const slotCx = ICONS_LEFT + i * (BASE_SZ + SZ_STEP + ICON_GAP) + sz / 2;
+      // Center-align: top-left y so icon is centred on DOCK_CY
+      const iy = DOCK_CY - sz / 2;
 
       if (i < stage) {
         // Past stages: dim fill, stage-colored outline
