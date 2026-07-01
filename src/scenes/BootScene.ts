@@ -164,8 +164,8 @@ export class BootScene extends Phaser.Scene {
       0xf39c12, // stage 3 – orange
       0xe67e22, // stage 4 – dark orange
       0xe74c3c, // stage 5 – red
-      0xc0392b, // stage 6 – dark red
-      0x922b21, // stage 7 – deep red (danger)
+      0xa02830, // stage 6 – dark red, barely any purple
+      0x721820, // stage 7 – very dark crimson-red, whisper of purple (MAX)
     ];
 
     const ANIM_FRAMES = [
@@ -180,7 +180,9 @@ export class BootScene extends Phaser.Scene {
     ];
 
     const totalFrames = ANIM_FRAMES.reduce((a, f) => a + f.count, 0);
-    const CELL = SIZE_STAGES[SIZE_STAGES.length - 1].width; // 80px cell
+    // Extra 80px over the largest stage body prevents deformed frames (max sx≈1.28 → 205px)
+    // from bleeding into adjacent cells and causing the "tile effect" wrap artifact.
+    const CELL = (SIZE_STAGES[SIZE_STAGES.length - 1].width as number) + 80; // 240px
 
     SIZE_STAGES.forEach((stage, si) => {
       const color = PALETTE[si];

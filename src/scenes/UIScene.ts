@@ -38,9 +38,9 @@ export class UIScene extends Phaser.Scene {
   private timerBarGfx!: Phaser.GameObjects.Graphics;
   private timerTotal  = 0;
 
-  // Pre-burp vignette
+  // Low-timer screen border vignette
   private vignetteGfx!: Phaser.GameObjects.Graphics;
-  private vignetteVisible = false;
+  private vignetteTimerPulsing = false;
 
   // Dock
   private dockBg!: Phaser.GameObjects.Graphics;
@@ -74,18 +74,20 @@ export class UIScene extends Phaser.Scene {
     this.mashGated      = false;
     this.currentFill    = 0;
     this.activeBubbles  = 0;
-    this.timerTotal     = 0;
-    this.vignetteVisible = false;
+    this.timerTotal             = 0;
+    this.vignetteTimerPulsing   = false;
 
     const pad = 32;
 
     // ── Timer (top centre) ─────────────────────────────────────────────────
-    this.timerText = this.add.text(GAME_WIDTH / 2, pad, "1:05", {
-      fontSize: "56px", color: "#ffffff", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+    // Timer sits inside a circular arc — center at (CX, TIMER_CY)
+    const TIMER_CY = pad + 85; // 117 — circle radius 85, top at pad=32
+    this.timerText = this.add.text(GAME_WIDTH / 2, TIMER_CY, "1:05", {
+      fontSize: "68px", color: "#ffffff", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5, 0.5).setDepth(6);
 
-    // Timer progress bar — 500px wide, below the timer text
+    // Circular arc drawn every tick in setTimer()
     this.timerBarGfx = this.add.graphics().setDepth(5);
 
     // ── Score (top left) ───────────────────────────────────────────────────
@@ -102,9 +104,10 @@ export class UIScene extends Phaser.Scene {
 
     // ── Screen-edge vignette for pre-burp signal ───────────────────────────
     // Drawn once as 4 edge strips; alpha is animated on/off via tweens.
+    // Orange border vignette — pulses when timer hits < 15s
     this.vignetteGfx = this.add.graphics().setDepth(15).setAlpha(0);
     const VS = 90; // strip width/height in px
-    this.vignetteGfx.fillStyle(0xe04010, 1);
+    this.vignetteGfx.fillStyle(0xf39c12, 1); // amber/orange
     this.vignetteGfx.fillRect(0, 0, GAME_WIDTH, VS);                          // top
     this.vignetteGfx.fillRect(0, GAME_HEIGHT - VS, GAME_WIDTH, VS);           // bottom
     this.vignetteGfx.fillRect(0, VS, VS, GAME_HEIGHT - VS * 2);               // left
@@ -140,7 +143,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10).setVisible(false);
 
     // ── Persistent stress message (stays until level ends) ─────────────────
-    this.stressText = this.add.text(GAME_WIDTH / 2, 148, "", {
+    this.stressText = this.add.text(GAME_WIDTH / 2, 224, "", {
       fontSize: "48px", color: "#f39c12", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
     }).setOrigin(0.5).setDepth(10).setVisible(false);
@@ -384,23 +387,40 @@ export class UIScene extends Phaser.Scene {
       });
     }
 
-    // ── Shrinking timer bar ────────────────────────────────────────────────
-    const BAR_W  = 500;
-    const BAR_H  = 10;
-    const BAR_X  = GAME_WIDTH / 2 - BAR_W / 2;
-    const BAR_Y  = 106; // just below timer text
-    const fillPct = this.timerTotal > 0 ? Math.max(0, remaining / this.timerTotal) : 1;
+    // Orange border vignette — starts pulsing once at < 15s remaining
+    if (remaining < 15 && !this.vignetteTimerPulsing) {
+      this.vignetteTimerPulsing = true;
+      this.tweens.add({
+        targets: this.vignetteGfx,
+        alpha: 0.18,
+        duration: 600, ease: "Sine.InOut",
+        yoyo: true, repeat: -1,
+      });
+    }
 
-    this.timerBarGfx.clear();
-    // Track
-    this.timerBarGfx.fillStyle(0x0d0d1a, 0.65);
-    this.timerBarGfx.fillRoundedRect(BAR_X, BAR_Y, BAR_W, BAR_H, 5);
-    // Fill — same colour family as timer text
+    // ── Circular arc timer ────────────────────────────────────────────────
+    const R   = 85;                        // arc radius
+    const CX  = GAME_WIDTH / 2;
+    const CY  = 32 + R;                    // 117 — matches timerText center
+    const T   = 10;                        // line thickness
     const fillHex = remaining <= 15 ? 0xe74c3c
                   : remaining <= 30 ? 0xf39c12
                   : 0xffffff;
-    this.timerBarGfx.fillStyle(fillHex, 0.85);
-    this.timerBarGfx.fillRoundedRect(BAR_X, BAR_Y, Math.max(BAR_H, BAR_W * fillPct), BAR_H, 5);
+    const sweep = this.timerTotal > 0
+      ? Math.max(0, (remaining / this.timerTotal) * Math.PI * 2)
+      : Math.PI * 2;
+
+    this.timerBarGfx.clear();
+    // Background track — full dark circle
+    this.timerBarGfx.lineStyle(T, 0x0d0d1a, 0.6);
+    this.timerBarGfx.strokeCircle(CX, CY, R);
+    // Coloured arc sweeping clockwise from top, shrinking as time depletes
+    if (sweep > 0.02) {
+      this.timerBarGfx.lineStyle(T, fillHex, 0.9);
+      this.timerBarGfx.beginPath();
+      this.timerBarGfx.arc(CX, CY, R, -Math.PI / 2, -Math.PI / 2 + sweep, false);
+      this.timerBarGfx.strokePath();
+    }
   }
 
   private setGoal(threshold: number) {
@@ -426,6 +446,8 @@ export class UIScene extends Phaser.Scene {
         },
       });
     }
+    // Large centred flash so the player can't miss it
+    this.showMessage("point goal reached.\nexit is now open.", "#6fdc8c");
   }
 
   private setScore(score: number) {
@@ -465,19 +487,6 @@ export class UIScene extends Phaser.Scene {
         this.mashPingPong.setX(VESSEL_CX - 22);
       }
     }
-    // ── Pre-burp screen-edge vignette ────────────────────────────────────
-    // pct < 0.12 means the cooldown is about to fire — give a "here it comes" cue
-    const vignetteWanted = pct > 0 && pct < 0.12 && this.mashHintActive;
-    if (vignetteWanted && !this.vignetteVisible) {
-      this.vignetteVisible = true;
-      this.tweens.killTweensOf(this.vignetteGfx);
-      this.tweens.add({ targets: this.vignetteGfx, alpha: 0.18, duration: 300 });
-    } else if (!vignetteWanted && this.vignetteVisible) {
-      this.vignetteVisible = false;
-      this.tweens.killTweensOf(this.vignetteGfx);
-      this.tweens.add({ targets: this.vignetteGfx, alpha: 0, duration: 400 });
-    }
-
     this.setCooldown(pct);
   }
 
