@@ -297,13 +297,16 @@ export class GameScene extends Phaser.Scene {
     const actual = this.sizeSystem.mashAccelerate(baseReduction);
     if (actual <= 0) return;
 
-    // Bob squirm — quick squeeze to give physical feedback
-    this.tweens.killTweensOf(this.blob.visual);
-    this.tweens.add({
-      targets: this.blob.visual, scaleX: 1.12,
-      duration: 50, ease: "Back.Out",
-      onComplete: () => this.tweens.add({ targets: this.blob.visual, scaleX: 1, duration: 80 }),
-    });
+    // Bob squirm — only when NOT mid-burp; killing tweens during a burp chain
+    // breaks the Phase1→2→3→4 onComplete sequence and leaves isBurping stuck true.
+    if (!this.blob.isBurpingNow) {
+      this.tweens.killTweensOf(this.blob.visual);
+      this.tweens.add({
+        targets: this.blob.visual, scaleX: 1.12,
+        duration: 50, ease: "Back.Out",
+        onComplete: () => this.tweens.add({ targets: this.blob.visual, scaleX: 1, duration: 80 }),
+      });
+    }
 
     // Notify UIScene to flash the Z/X hint and vessel
     this.scene.get("UIScene")?.events.emit("burp-mash", key);

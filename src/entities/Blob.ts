@@ -284,6 +284,9 @@ export class Blob {
 
   getStage(): StageIndex { return this.stage; }
 
+  /** True while the burp animation chain is running. Used to guard external tween kills. */
+  get isBurpingNow(): boolean { return this.isBurping; }
+
   destroy() {
     this.visual.destroy();
   }

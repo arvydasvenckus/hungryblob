@@ -54,6 +54,9 @@ export class UIScene extends Phaser.Scene {
   private mashLabelZ!: Phaser.GameObjects.Text;
   private mashLabelX!: Phaser.GameObjects.Text;
   private mashHintActive = false;
+  private mashBounceZ?: Phaser.Tweens.Tween;
+  private mashBounceX?: Phaser.Tweens.Tween;
+  private mashBaseY = 0;
 
   constructor() { super({ key: "UIScene" }); }
 
@@ -91,6 +94,7 @@ export class UIScene extends Phaser.Scene {
     const hintY = DOCK_TOP - 20;
     [this.mashHintZ, this.mashLabelZ] = this.makeKeyHint(VESSEL_CX - 22, hintY, "Z");
     [this.mashHintX, this.mashLabelX] = this.makeKeyHint(VESSEL_CX + 22, hintY, "X");
+    this.mashBaseY = hintY;
 
     // ── Message overlay ────────────────────────────────────────────────────
     this.messageText = this.add.text(GAME_WIDTH / 2, 520, "", {
@@ -401,20 +405,78 @@ export class UIScene extends Phaser.Scene {
       this.mashHintActive = shouldShow;
       const alpha = shouldShow ? 0.55 : 0;
       this.tweens.add({ targets: [this.mashHintZ, this.mashHintX], alpha, duration: 200 });
+      if (shouldShow) {
+        // Start the invitation bounce after fade-in completes
+        this.time.delayedCall(220, () => this.startMashBounce());
+      } else {
+        // Stop bouncing and snap back to base position
+        this.mashBounceZ?.stop(); this.mashBounceX?.stop();
+        this.mashHintZ.setY(this.mashBaseY); this.mashHintX.setY(this.mashBaseY);
+      }
     }
     this.setCooldown(pct);
   }
 
   private onMash(key: "Z" | "X") {
-    const active = key === "Z" ? this.mashHintZ : this.mashHintX;
-    const other  = key === "Z" ? this.mashHintX : this.mashHintZ;
-    this.tweens.killTweensOf(active); this.tweens.killTweensOf(other);
-    active.setColor("#ffffff").setAlpha(1);
-    other.setColor("#555555").setAlpha(0.4);
-    // Fade active back to dim after the flash
-    this.tweens.add({ targets: active, alpha: 0.55, delay: 60, duration: 120 });
+    const activeCont  = key === "Z" ? this.mashHintZ   : this.mashHintX;
+    const otherCont   = key === "Z" ? this.mashHintX   : this.mashHintZ;
+    const activeLabel = key === "Z" ? this.mashLabelZ  : this.mashLabelX;
+    const otherLabel  = key === "Z" ? this.mashLabelX  : this.mashLabelZ;
+    // Stop invitation bounce — the press IS the feedback now
+    this.mashBounceZ?.stop(); this.mashBounceX?.stop();
+    this.mashHintZ.setY(this.mashBaseY); this.mashHintX.setY(this.mashBaseY);
+    // Flash pressed key: full brightness
+    activeCont.setAlpha(1); activeLabel.setColor("#ffffff");
+    // Dim other key
+    otherCont.setAlpha(0.4); otherLabel.setColor("#555555");
+    // Fade back and restart invitation bounce once flash settles
+    this.tweens.add({
+      targets: activeCont, alpha: 0.7, delay: 60, duration: 120,
+      onComplete: () => { if (this.mashHintActive) this.startMashBounce(); },
+    });
     // Flash vessel with a brief alpha dip
     this.tweens.add({ targets: this.vesselGfx, alpha: 0.5, duration: 40, yoyo: true });
+  }
+
+  /** Looping vertical bounce — alternating Z/X to invite the player to mash. */
+  private startMashBounce() {
+    if (!this.mashHintActive) return;
+    // Reset positions first in case a previous bounce stopped mid-travel
+    this.mashHintZ.setY(this.mashBaseY);
+    this.mashHintX.setY(this.mashBaseY);
+    this.mashBounceZ = this.tweens.add({
+      targets: this.mashHintZ, y: this.mashBaseY - 6,
+      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1, delay: 0,
+    });
+    this.mashBounceX = this.tweens.add({
+      targets: this.mashHintX, y: this.mashBaseY - 6,
+      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1, delay: 180,
+    });
+  }
+
+  /** Draw a keyboard keycap button at (x, y). Returns [container, label]. */
+  private makeKeyHint(x: number, y: number, letter: string): [Phaser.GameObjects.Container, Phaser.GameObjects.Text] {
+    const KW = 34, KH = 30, R = 5;
+    const g = this.add.graphics();
+    // Key body — dark plastic
+    g.fillStyle(0x252525, 1);
+    g.fillRoundedRect(-KW / 2, -KH / 2, KW, KH, R);
+    // Top-edge highlight (gives 3-D key lift)
+    g.fillStyle(0x484848, 1);
+    g.fillRoundedRect(-KW / 2, -KH / 2, KW, 5, { tl: R, tr: R, bl: 0, br: 0 });
+    // Bottom press shadow
+    g.fillStyle(0x0a0a0a, 1);
+    g.fillRoundedRect(-KW / 2, KH / 2 - 5, KW, 5, { tl: 0, tr: 0, bl: R, br: R });
+    // Border
+    g.lineStyle(1.5, 0x585858, 1);
+    g.strokeRoundedRect(-KW / 2 + 0.75, -KH / 2 + 0.75, KW - 1.5, KH - 1.5, R);
+
+    const label = this.add.text(0, 0, letter, {
+      fontSize: "15px", color: "#888888", fontFamily: "monospace", fontStyle: "bold",
+    }).setOrigin(0.5);
+
+    const container = this.add.container(x, y, [g, label]).setDepth(4).setAlpha(0);
+    return [container, label];
   }
 
   private setCooldown(pct: number) {
