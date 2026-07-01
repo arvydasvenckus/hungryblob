@@ -117,6 +117,23 @@ export class SoundSystem {
     });
   }
 
+  /** Short ascending arpeggio when the score threshold is crossed */
+  goalReached() {
+    const ctx = this.audio;
+    const notes = [523, 659, 784]; // C5 E5 G5 — bright and decisive
+    notes.forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.08;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.20);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.22);
+    });
+  }
+
   /** Descending sad-trombone on level fail */
   levelFail() {
     const ctx = this.audio;

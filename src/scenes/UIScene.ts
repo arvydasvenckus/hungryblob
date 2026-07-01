@@ -30,8 +30,17 @@ export class UIScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private scoreThreshold = 0;
   private goalText!: Phaser.GameObjects.Text;
+  private goalPulsed = false;
   private messageText!: Phaser.GameObjects.Text;
   private stressText!: Phaser.GameObjects.Text; // persistent "get cracking" during stress
+
+  // Timer bar
+  private timerBarGfx!: Phaser.GameObjects.Graphics;
+  private timerTotal  = 0;
+
+  // Pre-burp vignette
+  private vignetteGfx!: Phaser.GameObjects.Graphics;
+  private vignetteVisible = false;
 
   // Dock
   private dockBg!: Phaser.GameObjects.Graphics;
@@ -50,6 +59,10 @@ export class UIScene extends Phaser.Scene {
   private mashBounceX?: Phaser.Tweens.Tween;
   private mashBaseY = 0;
   private mashReminderLabel!: Phaser.GameObjects.Text;
+  private mashPingPong!: Phaser.GameObjects.Graphics;
+  private mashPingPongTween?: Phaser.Tweens.Tween;
+  // Gate: true in tutorial until the burger is eaten (show-mash-hint unlocks it)
+  private mashGated = false;
 
   constructor() { super({ key: "UIScene" }); }
 
@@ -57,9 +70,12 @@ export class UIScene extends Phaser.Scene {
     this.timerHidden    = false;
     this.timerPulsing   = false;
     this.scoreThreshold = 0;
+    this.goalPulsed     = false;
+    this.mashGated      = false;
     this.currentFill    = 0;
     this.activeBubbles  = 0;
-
+    this.timerTotal     = 0;
+    this.vignetteVisible = false;
 
     const pad = 32;
 
@@ -69,17 +85,30 @@ export class UIScene extends Phaser.Scene {
       stroke: "#000000", strokeThickness: 5,
     }).setOrigin(0.5, 0);
 
+    // Timer progress bar — 500px wide, below the timer text
+    this.timerBarGfx = this.add.graphics().setDepth(5);
+
     // ── Score (top left) ───────────────────────────────────────────────────
     this.scoreText = this.add.text(pad, pad, "points: 0", {
       fontSize: "40px", color: "#f1c40f", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 5,
     });
 
-    // ── Goal indicator ─────────────────────────────────────────────────────
+    // ── Goal indicator (larger for better visibility during gameplay) ───────
     this.goalText = this.add.text(pad, pad + 52, "", {
-      fontSize: "26px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      fontSize: "32px", color: "#c9956a", fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
       stroke: "#000000", strokeThickness: 3,
     }).setVisible(false);
+
+    // ── Screen-edge vignette for pre-burp signal ───────────────────────────
+    // Drawn once as 4 edge strips; alpha is animated on/off via tweens.
+    this.vignetteGfx = this.add.graphics().setDepth(15).setAlpha(0);
+    const VS = 90; // strip width/height in px
+    this.vignetteGfx.fillStyle(0xe04010, 1);
+    this.vignetteGfx.fillRect(0, 0, GAME_WIDTH, VS);                          // top
+    this.vignetteGfx.fillRect(0, GAME_HEIGHT - VS, GAME_WIDTH, VS);           // bottom
+    this.vignetteGfx.fillRect(0, VS, VS, GAME_HEIGHT - VS * 2);               // left
+    this.vignetteGfx.fillRect(GAME_WIDTH - VS, VS, VS, GAME_HEIGHT - VS * 2); // right
 
     // ── Bottom dock ────────────────────────────────────────────────────────
     this.buildDock();
@@ -89,6 +118,12 @@ export class UIScene extends Phaser.Scene {
     [this.mashHintZ, this.mashLabelZ] = this.makeKeyHint(VESSEL_CX - 22, hintY, "Z");
     [this.mashHintX, this.mashLabelX] = this.makeKeyHint(VESSEL_CX + 22, hintY, "X");
     this.mashBaseY = hintY;
+
+    // Ping-pong indicator dot — oscillates between Z and X to show alternation
+    this.mashPingPong = this.add.graphics().setDepth(5).setAlpha(0);
+    this.mashPingPong.fillStyle(0x6fdc8c, 1);
+    this.mashPingPong.fillCircle(0, 0, 5);
+    this.mashPingPong.setPosition(VESSEL_CX - 22, DOCK_TOP - 44);
 
     // Tutorial mash hint — shown near the soda cup after Bob eats the burger
     this.mashReminderLabel = this.add.text(VESSEL_CX, DOCK_TOP - 70,
@@ -115,6 +150,8 @@ export class UIScene extends Phaser.Scene {
     this.events.on("update-score",       (s: number)             => this.setScore(s));
     this.events.on("update-cooldown",    (p: number)             => this.onCooldownUpdate(p));
     this.events.on("show-mash-hint",     ()                      => {
+      // Burger eaten in tutorial — unlock Z/X hints and show the reminder label
+      this.mashGated = false;
       this.tweens.add({ targets: this.mashReminderLabel, alpha: 1, duration: 400 });
     });
     this.events.on("hide-mash-hint",     ()                      => {
@@ -122,7 +159,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.events.on("burp-mash",          (key: "Z" | "X")       => this.onMash(key));
     this.events.on("show-message",       (m: string, c?: string) => this.showMessage(m, c));
-    this.events.on("hide-timer",         ()                      => this.hideTimer());
+    this.events.on("hide-timer",         ()                      => { this.hideTimer(); this.mashGated = true; });
     this.events.on("set-score-threshold",(t: number)             => this.setGoal(t));
     this.events.on("exit-unlocked",      ()                      => this.onExitUnlocked());
     this.events.on("show-ring-hint",     ()                      => this.showRingHighlight());
@@ -317,16 +354,26 @@ export class UIScene extends Phaser.Scene {
   private hideTimer() {
     this.timerHidden = true;
     this.timerText.setVisible(false);
+    this.timerBarGfx.setVisible(false);
   }
 
   private setTimer(remaining: number) {
     if (this.timerHidden) return;
+
+    // Capture total time from the first tick so we can compute bar fraction
+    if (this.timerTotal === 0) this.timerTotal = remaining;
+
     const mins = Math.floor(remaining / 60);
     const secs = Math.floor(remaining % 60);
     this.timerText.setText(`${mins}:${secs.toString().padStart(2, "0")}`);
-    this.timerText.setColor(remaining < 15 ? "#e74c3c" : "#ffffff");
 
-    // Start pulse tween once when time crosses 15s
+    // White → amber → red as time runs low
+    const timerColor = remaining <= 15 ? "#e74c3c"
+                     : remaining <= 30 ? "#f39c12"
+                     : "#ffffff";
+    this.timerText.setColor(timerColor);
+
+    // Pulse tween — starts at 30s, kept at user-requested threshold
     if (remaining <= 30 && !this.timerPulsing) {
       this.timerPulsing = true;
       this.tweens.add({
@@ -336,6 +383,24 @@ export class UIScene extends Phaser.Scene {
         yoyo: true, repeat: -1,
       });
     }
+
+    // ── Shrinking timer bar ────────────────────────────────────────────────
+    const BAR_W  = 500;
+    const BAR_H  = 10;
+    const BAR_X  = GAME_WIDTH / 2 - BAR_W / 2;
+    const BAR_Y  = 106; // just below timer text
+    const fillPct = this.timerTotal > 0 ? Math.max(0, remaining / this.timerTotal) : 1;
+
+    this.timerBarGfx.clear();
+    // Track
+    this.timerBarGfx.fillStyle(0x0d0d1a, 0.65);
+    this.timerBarGfx.fillRoundedRect(BAR_X, BAR_Y, BAR_W, BAR_H, 5);
+    // Fill — same colour family as timer text
+    const fillHex = remaining <= 15 ? 0xe74c3c
+                  : remaining <= 30 ? 0xf39c12
+                  : 0xffffff;
+    this.timerBarGfx.fillStyle(fillHex, 0.85);
+    this.timerBarGfx.fillRoundedRect(BAR_X, BAR_Y, Math.max(BAR_H, BAR_W * fillPct), BAR_H, 5);
   }
 
   private setGoal(threshold: number) {
@@ -347,6 +412,20 @@ export class UIScene extends Phaser.Scene {
 
   private onExitUnlocked() {
     this.goalText.setText("✓ EXIT OPEN").setColor("#6fdc8c");
+    // One-time celebratory pulse on the goal text
+    if (!this.goalPulsed) {
+      this.goalPulsed = true;
+      this.goalText.setColor("#ffffff");
+      this.tweens.add({
+        targets: this.goalText,
+        scaleX: 1.45, scaleY: 1.45,
+        duration: 200, ease: "Back.Out",
+        yoyo: true,
+        onComplete: () => {
+          if (this.goalText?.active) this.goalText.setColor("#6fdc8c");
+        },
+      });
+    }
   }
 
   private setScore(score: number) {
@@ -360,7 +439,7 @@ export class UIScene extends Phaser.Scene {
 
   /** Wraps setCooldown and also manages mash-hint visibility. */
   private onCooldownUpdate(pct: number) {
-    const shouldShow = pct > 0.02; // cooldown only runs when stage > 0
+    const shouldShow = pct > 0.02 && !this.mashGated;
     if (shouldShow !== this.mashHintActive) {
       this.mashHintActive = shouldShow;
       const alpha = shouldShow ? 0.55 : 0;
@@ -379,9 +458,26 @@ export class UIScene extends Phaser.Scene {
       } else {
         // Stop bouncing and snap back to base position
         this.mashBounceZ?.stop(); this.mashBounceX?.stop();
-        this.mashHintZ.setY(this.mashBaseY); this.mashHintX.setY(this.mashBaseY);
+        this.mashHintZ.setY(this.mashBaseY).setScale(1); this.mashHintX.setY(this.mashBaseY).setScale(1);
+        // Stop and hide ping-pong dot
+        this.mashPingPongTween?.stop();
+        this.tweens.add({ targets: this.mashPingPong, alpha: 0, duration: 200 });
+        this.mashPingPong.setX(VESSEL_CX - 22);
       }
     }
+    // ── Pre-burp screen-edge vignette ────────────────────────────────────
+    // pct < 0.12 means the cooldown is about to fire — give a "here it comes" cue
+    const vignetteWanted = pct > 0 && pct < 0.12 && this.mashHintActive;
+    if (vignetteWanted && !this.vignetteVisible) {
+      this.vignetteVisible = true;
+      this.tweens.killTweensOf(this.vignetteGfx);
+      this.tweens.add({ targets: this.vignetteGfx, alpha: 0.18, duration: 300 });
+    } else if (!vignetteWanted && this.vignetteVisible) {
+      this.vignetteVisible = false;
+      this.tweens.killTweensOf(this.vignetteGfx);
+      this.tweens.add({ targets: this.vignetteGfx, alpha: 0, duration: 400 });
+    }
+
     this.setCooldown(pct);
   }
 
@@ -394,36 +490,76 @@ export class UIScene extends Phaser.Scene {
     const otherCont   = key === "Z" ? this.mashHintX   : this.mashHintZ;
     const activeLabel = key === "Z" ? this.mashLabelZ  : this.mashLabelX;
     const otherLabel  = key === "Z" ? this.mashLabelX  : this.mashLabelZ;
-    // Stop invitation bounce — the press IS the feedback now
+    // Stop invitation bounce and ping-pong — press feedback takes over
     this.mashBounceZ?.stop(); this.mashBounceX?.stop();
+    this.mashPingPongTween?.stop();
     this.mashHintZ.setY(this.mashBaseY); this.mashHintX.setY(this.mashBaseY);
-    // Flash pressed key: full brightness, keep dark label on light key
-    activeCont.setAlpha(1); activeLabel.setColor("#000000");
-    // Dim other key
-    otherCont.setAlpha(0.35); otherLabel.setColor("#444444");
-    // Fade back and restart invitation bounce once flash settles
+    // Flash pressed key: briefly depress (scale down), restore quickly
+    activeCont.setAlpha(1).setScale(0.9); activeLabel.setColor("#000000");
+    this.tweens.add({ targets: activeCont, scaleX: 1, scaleY: 1, alpha: 0.7, delay: 60, duration: 120 });
+    // OTHER key: pop up — "your turn next!"
+    this.tweens.killTweensOf(otherCont);
+    otherLabel.setColor("#000000");
     this.tweens.add({
-      targets: activeCont, alpha: 0.7, delay: 60, duration: 120,
-      onComplete: () => { if (this.mashHintActive) this.startMashBounce(); },
+      targets: otherCont,
+      scaleX: 1.28, scaleY: 1.28, alpha: 1,
+      duration: 80, ease: "Back.Out",
+      onComplete: () => {
+        this.tweens.add({ targets: otherCont, scaleX: 1, scaleY: 1, duration: 120,
+          onComplete: () => { if (this.mashHintActive) this.startMashBounce(); },
+        });
+      },
     });
     // Flash vessel with a brief alpha dip
     this.tweens.add({ targets: this.vesselGfx, alpha: 0.5, duration: 40, yoyo: true });
+
+    // Depletion arrows — small downward chevrons on both sides of the vessel
+    const arrowStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: "22px", color: "#6fdc8c",
+      fontFamily: "CandyBeans, monospace", resolution: window.devicePixelRatio || 1,
+      stroke: "#000", strokeThickness: 2,
+    };
+    const spawnArrow = (x: number, startY: number) => {
+      const a = this.add.text(x, startY, "▼", arrowStyle).setOrigin(0.5).setDepth(6).setAlpha(0.9);
+      this.tweens.add({
+        targets: a, y: startY + 28, alpha: 0,
+        duration: 420, ease: "Quad.In",
+        onComplete: () => a.destroy(),
+      });
+    };
+    const lx = VESSEL_CX - VESSEL_W / 2 - 12;
+    const rx = VESSEL_CX + VESSEL_W / 2 + 12;
+    const vy = DOCK_CY - 10;
+    spawnArrow(lx, vy);
+    spawnArrow(rx, vy + 8); // slight offset so both sides aren't perfectly synced
   }
 
-  /** Looping vertical bounce — alternating Z/X to invite the player to mash. */
+  /** Anti-phase seesaw — Z and X are always in opposite states so it's clear to alternate. */
   private startMashBounce() {
     if (!this.mashHintActive) return;
-    // Reset positions first in case a previous bounce stopped mid-travel
-    this.mashHintZ.setY(this.mashBaseY);
-    this.mashHintX.setY(this.mashBaseY);
+    // Reset Z to rest, set X to peak so they begin in true opposite phases
+    this.mashHintZ.setY(this.mashBaseY).setAlpha(0.45).setScale(0.95);
+    this.mashHintX.setY(this.mashBaseY - 8).setAlpha(1).setScale(1.1);
+
+    // Z: rest → peak
     this.mashBounceZ = this.tweens.add({
-      targets: this.mashHintZ, y: this.mashBaseY - 6,
-      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1, delay: 0,
+      targets: this.mashHintZ, y: this.mashBaseY - 8,
+      scaleX: 1.1, scaleY: 1.1, alpha: 1,
+      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1,
     });
+    // X: peak → rest  (when Z is up, X is down — perfect anti-phase)
     this.mashBounceX = this.tweens.add({
-      targets: this.mashHintX, y: this.mashBaseY - 6,
-      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1, delay: 180,
+      targets: this.mashHintX, y: this.mashBaseY,
+      scaleX: 0.95, scaleY: 0.95, alpha: 0.45,
+      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1,
     });
+    // Ping-pong dot oscillates in sync: starts over X (at peak), swings to Z
+    this.mashPingPong.setX(VESSEL_CX + 22);
+    this.mashPingPongTween = this.tweens.add({
+      targets: this.mashPingPong, x: VESSEL_CX - 22,
+      duration: 360, ease: "Sine.InOut", yoyo: true, repeat: -1,
+    });
+    this.tweens.add({ targets: this.mashPingPong, alpha: 0.85, duration: 200 });
   }
 
   /** Draw a keyboard keycap button at (x, y). Returns [container, label]. */

@@ -135,23 +135,32 @@ export class ResultScene extends Phaser.Scene {
     });
 
     const refreshSelection = () => {
+      highlight.clear();
       optionTexts.forEach((t, i) => {
         const active = i === selectedOption;
-        t.setColor(active ? "#ffffff" : options[i].color);
-        t.setAlpha(active ? 1 : 0.4);
-        t.setScale(active ? 1.08 : 1.0);
+        const bw = i === 0 ? 680 : 540;
+        const bh = i === 0 ? 70 : 58;
+        const br = 12;
+        const bx = GAME_WIDTH / 2 - bw / 2;
+        const by = t.y - bh / 2;
+        if (active) {
+          highlight.fillStyle(0x163824, 0.92);
+          highlight.fillRoundedRect(bx, by, bw, bh, br);
+          highlight.lineStyle(2.5, 0x6fdc8c, 1);
+          highlight.strokeRoundedRect(bx, by, bw, bh, br);
+        } else {
+          highlight.fillStyle(0x111111, 0.45);
+          highlight.fillRoundedRect(bx, by, bw, bh, br);
+          highlight.lineStyle(1.5, 0x2d3a30, 0.55);
+          highlight.strokeRoundedRect(bx, by, bw, bh, br);
+        }
+        t.setColor(active ? "#a4de6c" : options[i].color);
+        t.setAlpha(active ? 1 : 0.8);
+        t.setScale(1.0);
       });
-      // Highlight bar
+      // Move cursor alongside active button
       const sel = optionTexts[selectedOption];
-      const pw = 680;
-      const ph = sel.displayHeight + 24;
-      highlight.clear();
-      highlight.fillStyle(0x0e2018, 0.88);
-      highlight.fillRoundedRect(GAME_WIDTH / 2 - pw / 2, sel.y - ph / 2, pw, ph, 10);
-      highlight.lineStyle(2, 0x6fdc8c, 0.7);
-      highlight.strokeRoundedRect(GAME_WIDTH / 2 - pw / 2, sel.y - ph / 2, pw, ph, 10);
-      // Position cursor to the left of selected option
-      cursor.setPosition(sel.x - (sel.width * sel.scaleX) / 2 - 24, sel.y);
+      cursor.setPosition(sel.x - sel.width / 2 - 24, sel.y);
     };
 
     refreshSelection();

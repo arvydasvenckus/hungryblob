@@ -40,7 +40,7 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x1c1208, 1);
+  bg.fillStyle(0x141c2c, 1);
   bg.fillRect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT);
   drawRestaurantKitchenBg(bg, LEVEL_WIDTH, LEVEL_HEIGHT);
 
@@ -129,6 +129,16 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
   wall(1460, 317, 550, T);           // tunnel ceiling: x=1460–2010, bottom at y=349, gap=75px
   // Entry gap: x=2010–2050 (open, no ceiling) — player must walk right to x≈2010 to see it
 
+  // ── Ceiling-top tooltip — always visible, world space ─────────────────────
+  // Sits above the banana on top of the tunnel ceiling (y=317 surface).
+  // Not proximity-triggered — just a static world-space text.
+  scene.add.text(1700, 258,
+    "you don't need to eat everything.\nbalance points and restraint.", {
+      fontSize: "13px", color: "#8ab0cc", fontFamily: "CandyBeans, monospace",
+      resolution: window.devicePixelRatio || 1,
+      stroke: "#000", strokeThickness: 2, align: "center",
+    }).setOrigin(0.5, 1);
+
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL_WIDTH - T * 3;
   const exitY  = FLOOR_Y - T * 2;
@@ -187,7 +197,7 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   const platforms = scene.physics.add.staticGroup();
 
   const bg = scene.add.graphics();
-  bg.fillStyle(0x0e1218, 1);
+  bg.fillStyle(0x1c3a50, 1);
   bg.fillRect(0, 0, LEVEL2_WIDTH, LEVEL2_HEIGHT);
   drawSupermarketBg(bg, LEVEL2_WIDTH, LEVEL2_HEIGHT);
 
@@ -318,126 +328,126 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
 function drawRestaurantKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
   const T = TILE_SIZE;
 
-  // Upper section — slightly lighter warm tone to suggest wall depth
-  g.fillStyle(0x241810, 1); g.fillRect(0, 0, w, Math.round(h * 0.57));
+  // Very dark ceiling band
+  g.fillStyle(0x0c1018, 1); g.fillRect(0, 0, w, T + 10);
 
-  // Pot rail along ceiling
-  g.fillStyle(0x3d2a1a, 1); g.fillRect(0, T, w, 8);
-  g.fillStyle(0x5a3d22, 0.5); g.fillRect(0, T, w, 2); // top highlight
-
-  // Warm overhead glow — one per 240px from rail
-  for (let x = 120; x < w; x += 240) {
-    g.fillStyle(0xc04800, 0.03); g.fillEllipse(x, T, 210, 150);
-    g.fillStyle(0xe06010, 0.025); g.fillEllipse(x, T, 100, 80);
+  // ── Pendant dome lights every 220px ────────────────────────────────────
+  for (let x = 110; x < w; x += 220) {
+    // Thin electrical rod
+    g.fillStyle(0x090c16, 1); g.fillRect(x - 2, T + 2, 4, 26);
+    // Dome shade: cylinder body + elliptical bottom rim
+    g.fillStyle(0x0d1020, 1);
+    g.fillRect(x - 22, T + 26, 44, 20);          // cylindrical body
+    g.fillEllipse(x, T + 46, 44, 18);             // bottom rim flare
+    g.fillStyle(0x181e2e, 0.7); g.fillRect(x - 18, T + 26, 36, 3); // top seam
+    // Warm glow cone below dome
+    g.fillStyle(0xd08040, 0.05); g.fillEllipse(x, T + 56, 90, 60);
+    g.fillStyle(0xe09050, 0.025); g.fillEllipse(x, T + 64, 50, 30);
   }
 
-  // Hanging pots / pans — alternating shapes every 240px
-  for (let x = 120; x < w - 60; x += 240) {
-    g.fillStyle(0x1e1208, 0.85);
-    if (((x / 240) | 0) % 2 === 0) {
-      // Pot — round body, two side handles
-      g.fillRect(x - 3, T + 8, 6, 40);                          // rod
-      g.fillRoundedRect(x - 22, T + 48, 44, 38, 5);             // body
-      g.fillRect(x - 32, T + 62, 12, 8);                        // left handle
-      g.fillRect(x + 20, T + 62, 12, 8);                        // right handle
-      g.fillStyle(0x2e1e0e, 0.5); g.fillRect(x - 22, T + 48, 44, 4); // rim
-    } else {
-      // Pan — elliptical disc, long handle extending right
-      g.fillRect(x - 3, T + 8, 6, 36);                          // rod
-      g.fillEllipse(x, T + 58, 52, 28);                         // pan face
-      g.fillRect(x + 22, T + 52, 40, 9);                        // handle
+  // ── Copper pan cluster every 550px ─────────────────────────────────────
+  for (let rx = 260; rx < w; rx += 550) {
+    // Horizontal rack bar
+    g.fillStyle(0x3a2010, 0.65); g.fillRect(rx, T + 58, 180, 7);
+    g.fillStyle(0x5a3020, 0.3);  g.fillRect(rx, T + 58, 180, 2); // top gleam
+    // 5 copper pans hanging from bar
+    for (let i = 0; i < 5; i++) {
+      const px = rx + 18 + i * 36;
+      const hl = 16 + (i % 2) * 10; // hook length varies
+      g.fillStyle(0x4a2810, 0.6); g.fillRect(px - 2, T + 65, 4, hl); // hook
+      g.fillStyle(0xa05018, 0.55); g.fillCircle(px, T + 65 + hl + 18, 15); // pan face
+      g.fillStyle(0xc06828, 0.3);  g.fillCircle(px - 4, T + 65 + hl + 12, 6); // highlight
     }
   }
 
-  // Wall tile grid
-  g.lineStyle(1, 0x3d2618, 0.38);
-  for (let x = 0; x <= w; x += 56) {
-    g.beginPath(); g.moveTo(x, T); g.lineTo(x, h - 80); g.strokePath();
+  // ── Wall: subtle vertical panels ───────────────────────────────────────
+  g.lineStyle(1, 0x1c2438, 0.3);
+  for (let x = 0; x <= w; x += 64) {
+    g.beginPath(); g.moveTo(x, T + 10); g.lineTo(x, h - 76); g.strokePath();
   }
-  for (let y = T; y < h - 80; y += 56) {
+  for (let y = T + 10; y < h - 76; y += 64) {
     g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
   }
 
-  // Counter band near floor
-  g.fillStyle(0x2a1e12, 1); g.fillRect(0, h - 80, w, 80);
-  // Metallic counter-top edge
-  g.fillStyle(0x6a4a30, 0.6); g.fillRect(0, h - 81, w, 3);
-  g.fillStyle(0x4a3020, 0.35); g.fillRect(0, h - 78, w, 2);
-  // Kick plate
-  g.fillStyle(0x120a04, 0.7); g.fillRect(0, h - 18, w, 18);
-
-  // Steam wisps (very subtle)
-  g.lineStyle(1.5, 0x7a5a38, 0.15);
-  for (let x = 320; x < w; x += 480) {
-    for (let i = 0; i < 3; i++) {
-      const sx = x + i * 18;
-      g.beginPath();
-      g.moveTo(sx, h - 80); g.lineTo(sx + 6, h - 130); g.lineTo(sx - 3, h - 180);
-      g.strokePath();
-    }
-  }
+  // ── Counter near floor (dark warm wood) ────────────────────────────────
+  g.fillStyle(0x241a10, 1); g.fillRect(0, h - 76, w, 76);
+  g.fillStyle(0x5a3a20, 0.55); g.fillRect(0, h - 77, w, 3);
+  g.fillStyle(0x0e0804, 0.65); g.fillRect(0, h - 18, w, 18);
 }
 
 // ─── Theme: Supermarket (Level 1 — The Squeeze) ─────────────────────────────
 function drawSupermarketBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
   const T = TILE_SIZE;
 
-  // Ceiling band
-  g.fillStyle(0x0a0d12, 1); g.fillRect(0, 0, w, T + 18);
+  // Slightly lighter ceiling
+  g.fillStyle(0x16303e, 1); g.fillRect(0, 0, w, T + 12);
 
-  // Fluorescent light strip at ceiling line
-  g.fillStyle(0x1a2838, 0.9); g.fillRect(0, T, w, 5);
-
-  // Fluorescent glow — one pool per 280px
-  for (let x = 140; x < w; x += 280) {
-    g.fillStyle(0x8cb4e0, 0.04); g.fillEllipse(x, T, 300, 200);
-    g.fillStyle(0xaad0f4, 0.03); g.fillEllipse(x, T, 140, 100);
-    // Light housing tube
-    g.fillStyle(0x243448, 0.7); g.fillRect(x - 65, T + 2, 130, 4);
+  // ── Overhead fluorescent bars every 240px ───────────────────────────────
+  for (let x = 120; x < w; x += 240) {
+    g.fillStyle(0x285060, 0.9); g.fillRoundedRect(x - 60, T - 4, 120, 10, 2); // housing
+    g.fillStyle(0xb0d8f0, 0.18); g.fillRect(x - 52, T + 1, 104, 4);           // tube
+    // Broad cool glow pool
+    g.fillStyle(0x90c0e0, 0.06); g.fillEllipse(x, T + 8, 280, 140);
   }
 
-  // Repeating shelf units — one per 320px
+  // ── Prominent shelving units every 320px ────────────────────────────────
   for (let sx = 0; sx < w; sx += 320) {
-    const rx  = sx + 50;
-    const rw  = 220;
-    const rh  = h - T - 18 - 64;
+    const rx = sx + 24;
+    const rw = 262;
+    const rh = h - T - 12 - 58;
 
-    // Back panel
-    g.fillStyle(0x111c28, 1); g.fillRect(rx, T + 18, rw, rh);
+    // Back panel — medium blue-gray (lighter than before, shelf units visible)
+    g.fillStyle(0x2a4a60, 1); g.fillRect(rx, T + 12, rw, rh);
     // Side uprights
-    g.fillStyle(0x0e1820, 1);
-    g.fillRect(rx,           T + 18, 10, rh);
-    g.fillRect(rx + rw - 10, T + 18, 10, rh);
+    g.fillStyle(0x3a5a72, 1);
+    g.fillRect(rx,           T + 12, 9, rh);
+    g.fillRect(rx + rw - 9,  T + 12, 9, rh);
     // Top cap
-    g.fillStyle(0x1c2c3c, 1); g.fillRect(rx, T + 14, rw, 5);
+    g.fillStyle(0x4a6a82, 0.95); g.fillRect(rx, T + 8, rw, 5);
 
-    // 7 shelf boards with product silhouettes
-    const shelfStep = rh / 7;
-    for (let si = 0; si < 7; si++) {
-      const sy = T + 18 + si * shelfStep;
-      g.fillStyle(0x182434, 1); g.fillRect(rx + 10, sy, rw - 20, 8);
+    // 6 shelf boards
+    const step = rh / 6;
+    for (let si = 0; si < 6; si++) {
+      const sy = T + 12 + si * step;
+      g.fillStyle(0x3a5a72, 1); g.fillRect(rx + 9, sy, rw - 18, 7); // board
 
-      // Product boxes (4 per shelf, random heights)
-      for (let bi = 0; bi < 4; bi++) {
-        const bx = rx + 14 + bi * 50;
-        const bh = 28 + ((si * 4 + bi) * 13) % 26;
-        g.fillStyle(0x162030, 0.85); g.fillRect(bx, sy + 8, 42, bh);
-        // Subtle edge highlight
-        g.fillStyle(0x1e2c40, 0.45); g.fillRect(bx, sy + 8, 3, bh);
+      // Products: muted varied silhouettes per shelf
+      const PROD_COLORS = [0x3a5882, 0x2a5050, 0x4a4060, 0x385048, 0x484070, 0x3a6050];
+      for (let bi = 0; bi < 5; bi++) {
+        const bx = rx + 13 + bi * 48;
+        const bh = 22 + ((si * 5 + bi) * 11) % 20;
+        g.fillStyle(PROD_COLORS[(si + bi) % 6], 0.65); g.fillRect(bx, sy + 7, 42, bh);
+        g.fillStyle(0x5a7a94, 0.25); g.fillRect(bx, sy + 7, 4, bh); // edge
+      }
+    }
+
+    // ── Refrigerator case at right edge of every other unit ──────────────
+    if (((sx / 320) | 0) % 2 === 0) {
+      const cx = rx + rw + 4;
+      const cw = 72;
+      const ch = rh;
+      g.fillStyle(0x1e3a4e, 1);  g.fillRect(cx, T + 12, cw, ch);          // frame
+      g.fillStyle(0x2a5070, 0.7); g.fillRect(cx + 6, T + 16, cw - 12, ch - 8); // glass door
+      g.fillStyle(0x80b8d8, 0.1); g.fillRect(cx + 6, T + 16, cw - 12, ch - 8); // cold tint
+      // Door handle
+      g.fillStyle(0x4a6a84, 0.8); g.fillRect(cx + cw - 12, T + ch / 3, 5, ch / 4);
+      // Shelf lines inside fridge
+      g.lineStyle(1, 0x285070, 0.5);
+      for (let fi = 1; fi < 4; fi++) {
+        const fy = T + 16 + (ch - 8) * fi / 4;
+        g.beginPath(); g.moveTo(cx + 6, fy); g.lineTo(cx + cw - 6, fy); g.strokePath();
       }
     }
   }
 
-  // Floor band
-  g.fillStyle(0x0c1016, 1); g.fillRect(0, h - 66, w, 66);
-  // Floor reflection edge
-  g.fillStyle(0x1a2838, 0.22); g.fillRect(0, h - 67, w, 3);
-  // Floor tile grid
-  g.lineStyle(1, 0x141e2a, 0.42);
-  for (let x = 0; x <= w; x += 100) {
-    g.beginPath(); g.moveTo(x, h - 66); g.lineTo(x, h); g.strokePath();
+  // ── Floor: lighter gray-blue tiles ─────────────────────────────────────
+  g.fillStyle(0x1a3448, 1); g.fillRect(0, h - 58, w, 58);
+  g.fillStyle(0x2a4a62, 0.32); g.fillRect(0, h - 59, w, 3);
+  g.lineStyle(1, 0x1e3a52, 0.4);
+  for (let x = 0; x <= w; x += 80) {
+    g.beginPath(); g.moveTo(x, h - 58); g.lineTo(x, h); g.strokePath();
   }
-  for (let y = h - 66; y <= h; y += 33) {
+  for (let y = h - 58; y <= h; y += 29) {
     g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
   }
 }
@@ -448,62 +458,83 @@ function drawVintedKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: numbe
   const T    = TILE_SIZE;
   const TEAL = 0x00b5a5;
 
-  // Ceiling band
-  g.fillStyle(0x0a1010, 1); g.fillRect(0, 0, w, T + 20);
-
-  // Teal brand glow from ceiling — one per 300px
+  // Dark ceiling strip
+  g.fillStyle(0x0a1616, 1); g.fillRect(0, 0, w, T + 12);
+  // Ceiling glow
   for (let x = 150; x < w; x += 300) {
-    g.fillStyle(TEAL, 0.04); g.fillEllipse(x, T, 280, 210);
-    g.fillStyle(0x00c8b8, 0.03); g.fillEllipse(x, T, 130, 110);
+    g.fillStyle(TEAL, 0.05); g.fillEllipse(x, T, 260, 160);
   }
 
-  // Upper cabinet / utensil rail
-  g.fillStyle(0x1e3030, 1); g.fillRect(0, T, w, 8);
-  g.fillStyle(TEAL, 0.25); g.fillRect(0, T, w, 2); // teal highlight
+  // Upper wooden cabinet rail
+  g.fillStyle(0x5a3414, 1); g.fillRect(0, T, w, 10);
+  g.fillStyle(0x7a4a20, 0.4); g.fillRect(0, T, w, 3);
 
-  // Hanging utensils — three alternating shapes every 100px
-  for (let x = 80; x < w - 40; x += 100) {
-    g.fillStyle(0x142020, 0.88);
-    const v = (x / 100 | 0) % 3;
-    if (v === 0) {
-      // Spatula: rod + flat rectangular head
-      g.fillRect(x - 2, T + 8, 4, 50);
-      g.fillRoundedRect(x - 9, T + 58, 18, 22, 2);
-    } else if (v === 1) {
-      // Ladle: rod + circle bowl
-      g.fillRect(x - 2, T + 8, 4, 44);
-      g.fillCircle(x, T + 60, 11);
+  // ── Geometric tile wall (distinct square tiles + grout) ─────────────────
+  const TSZ = 44; // tile size in world pixels
+  const wallTop = T + 10;
+  const wallBot = h - 70;
+  // Tile fills
+  for (let tx = 0; tx < w; tx += TSZ) {
+    for (let ty = wallTop; ty < wallBot; ty += TSZ) {
+      const even = (((tx / TSZ) | 0) + ((ty / TSZ) | 0)) % 2 === 0;
+      g.fillStyle(even ? 0x1c4040 : 0x184040, 1);
+      g.fillRect(tx + 2, ty + 2, TSZ - 4, TSZ - 4);
+    }
+  }
+  // Grout lines over tiles
+  g.lineStyle(2, 0x0c2424, 0.9);
+  for (let tx = 0; tx <= w; tx += TSZ) {
+    g.beginPath(); g.moveTo(tx, wallTop); g.lineTo(tx, wallBot); g.strokePath();
+  }
+  for (let ty = wallTop; ty <= wallBot; ty += TSZ) {
+    g.beginPath(); g.moveTo(0, ty); g.lineTo(w, ty); g.strokePath();
+  }
+
+  // ── Wooden wall shelves with kitchen appliances every 480px ─────────────
+  for (let cx = 60; cx < w; cx += 480) {
+    const shelfY = h - 130;
+    const sW     = 200;
+    // Shelf board
+    g.fillStyle(0x6b3a18, 0.7); g.fillRect(cx, shelfY, sW, 10);
+    g.fillStyle(0x8b4e24, 0.4); g.fillRect(cx, shelfY, sW, 3);
+    // Brackets
+    g.fillStyle(0x5a3010, 0.55);
+    g.fillRect(cx + 12, shelfY + 10, 8, 34);
+    g.fillRect(cx + sW - 20, shelfY + 10, 8, 34);
+
+    // Appliance type cycles
+    const aType = (cx / 480 | 0) % 3;
+    const mid   = cx + sW / 2;
+    if (aType === 0) {
+      // Moka pot (espresso maker)
+      g.fillStyle(0x282828, 0.7);
+      g.fillRoundedRect(mid - 11, shelfY - 52, 22, 52, 3); // body
+      g.fillRoundedRect(mid - 7,  shelfY - 70, 14, 20, 2); // top
+      g.fillEllipse(mid, shelfY - 73, 20, 8);               // cap
+      g.fillStyle(0x484848, 0.3); g.fillRect(mid - 9, shelfY - 34, 18, 4); // band
+    } else if (aType === 1) {
+      // Coffee grinder
+      g.fillStyle(0x3a2818, 0.7);
+      g.fillRoundedRect(mid - 13, shelfY - 56, 26, 56, 3);
+      g.fillRoundedRect(mid - 9,  shelfY - 72, 18, 18, 2); // hopper
+      g.fillStyle(0x5a4028, 0.3); g.fillRect(mid - 11, shelfY - 32, 22, 4);
     } else {
-      // Fork: rod + two tines
-      g.fillRect(x - 2, T + 8, 4, 54);
-      g.fillRect(x - 8, T + 8, 4, 22);
-      g.fillRect(x + 4, T + 8, 4, 22);
+      // Row of mugs
+      for (let mi = 0; mi < 3; mi++) {
+        const mx = cx + 24 + mi * 46;
+        g.fillStyle(0x3a6055, 0.65); g.fillRoundedRect(mx, shelfY - 36, 30, 36, 3);
+        g.fillStyle(0x507068, 0.4); g.fillRect(mx + 4, shelfY - 30, 22, 4);
+        // Handle (arch)
+        g.lineStyle(2, 0x2e5048, 0.55);
+        g.beginPath(); g.arc(mx + 30, shelfY - 18, 8, -Math.PI / 2, Math.PI / 2, false); g.strokePath();
+      }
     }
   }
 
-  // Wall tile grid (teal-tinted lines)
-  g.lineStyle(1, 0x1e3232, 0.42);
-  for (let x = 0; x <= w; x += 56) {
-    g.beginPath(); g.moveTo(x, T); g.lineTo(x, h - 72); g.strokePath();
-  }
-  for (let y = T; y < h - 72; y += 56) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
-  }
-
-  // Sparse teal accent tiles — one every 280px × 168px grid cell
-  for (let x = 56; x < w; x += 280) {
-    for (let y = T + 56; y < h - 72; y += 168) {
-      g.fillStyle(TEAL, 0.05); g.fillRect(x, y, 56, 56);
-    }
-  }
-
-  // Counter band near floor
-  g.fillStyle(0x1a2828, 1); g.fillRect(0, h - 74, w, 74);
-  // Teal counter-top edge
-  g.fillStyle(TEAL, 0.28); g.fillRect(0, h - 75, w, 3);
-  g.fillStyle(0x1e3838, 0.55); g.fillRect(0, h - 72, w, 2);
-  // Kick plate
-  g.fillStyle(0x0a1212, 0.9); g.fillRect(0, h - 20, w, 20);
+  // ── Counter near floor ──────────────────────────────────────────────────
+  g.fillStyle(0x182828, 1); g.fillRect(0, h - 70, w, 70);
+  g.fillStyle(TEAL, 0.26); g.fillRect(0, h - 71, w, 3);
+  g.fillStyle(0x0a1010, 0.9); g.fillRect(0, h - 18, w, 18);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -543,7 +574,7 @@ export function buildLevel3(scene: Phaser.Scene): LevelObjects {
 
   const bg = scene.add.graphics();
   bg.setDepth(-10);
-  bg.fillStyle(0x0c1716, 1);
+  bg.fillStyle(0x0e2828, 1);
   bg.fillRect(0, 0, LEVEL3_WIDTH, LEVEL3_HEIGHT);
   drawVintedKitchenBg(bg, LEVEL3_WIDTH, LEVEL3_HEIGHT);
 

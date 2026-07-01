@@ -94,13 +94,16 @@ export const LEVELS: LevelConfig[] = [
       // Bob eats while traversing the tunnel leftward during backtrack.
       // Stage 0→1 (47px<75px) can still exit after eating ✓; stage 1→2 (66px<75px) also ✓
       { x: 1620, y: 400, type: "watermelon" }, // +1;  50 pts  (rests on tunnel platform floor)
+      // On top of the tunnel ceiling slab (y=317 surface, x=1460–2010): secret bonus
+      // Accessible by jumping up from x>2010 then walking left on the ceiling.
+      { x: 1700, y: 293, type: "banana"     }, // +1;  50 pts  (on ceiling top — optional bonus)
     ],
   },
 
   // ── Index 1: Level 1 — "The Squeeze" ──────────────────────────────────────
   {
     key: "level1",
-    timeLimit: 59,     // tight — reduced by 6s for extra pressure
+    timeLimit: 55,
     music: "level",
     scoreThreshold: 300, // exit locked until 300 pts collected
     name: "The Squeeze",
@@ -136,7 +139,7 @@ export const LEVELS: LevelConfig[] = [
   // ── Index 2: Level 2 — "Sewer Depths" ────────────────────────────────────
   {
     key: "level2",
-    timeLimit: 75,
+    timeLimit: 71,
     music: "level",
     scoreThreshold: 400,
     name: "Feast Mode",
@@ -184,7 +187,7 @@ export const LEVELS: LevelConfig[] = [
   // ── Index 3: Level 3 — "All You Can Eat" ──────────────────────────────────
   {
     key: "level3",
-    timeLimit: 78,
+    timeLimit: 74,
     music: "level",
     scoreThreshold: 800,
     name: "All You Can Eat",

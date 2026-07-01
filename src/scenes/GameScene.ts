@@ -250,6 +250,7 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(1200, () => this.lockLabel?.setVisible(false));
       }
       ui.events.emit("exit-unlocked");
+      this.soundSystem.goalReached();
     }
 
     const popColor = category === "healthy" ? "#6fdc8c" : "#f39c12";
@@ -281,7 +282,7 @@ export class GameScene extends Phaser.Scene {
     const ui = this.scene.get("UIScene");
     ui.events.emit("hide-stress-msg");
     ui.events.emit("update-score", this.score);
-    ui.events.emit("show-message", "LEVEL COMPLETE!", "#6fdc8c");
+    ui.events.emit("show-message", "level complete.", "#6fdc8c");
 
     this.time.delayedCall(3000, () => {
       this.scene.stop("UIScene");
@@ -297,7 +298,7 @@ export class GameScene extends Phaser.Scene {
 
     const ui = this.scene.get("UIScene");
     ui.events.emit("hide-stress-msg");
-    ui.events.emit("show-message", "TIME'S UP!", "#e74c3c");
+    ui.events.emit("show-message", "time's up.", "#e74c3c");
 
     this.blob.playSadAnim();
 
@@ -323,7 +324,7 @@ export class GameScene extends Phaser.Scene {
     this.lastMashKey = key;
 
     const stage = this.sizeSystem.getStage();
-    const baseReduction = Math.max(40, Math.floor(220 / (1 + stage * 0.5)));
+    const baseReduction = Math.max(50, Math.floor(300 / (1 + stage * 0.5)));
     const actual = this.sizeSystem.mashAccelerate(baseReduction);
     if (actual <= 0) return;
 
@@ -398,7 +399,7 @@ export class GameScene extends Phaser.Scene {
         if (this.exitLocked) {
           const needed = LEVELS[this.levelIndex].scoreThreshold - this.score;
           const ui = this.scene.get("UIScene");
-          ui.events.emit("show-message", `${needed} pts to go.`, "#c9956a");
+          ui.events.emit("show-message", `${needed} points to go.`, "#c9956a");
         } else {
           this.completeLevel();
         }

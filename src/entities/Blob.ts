@@ -64,6 +64,12 @@ export class Blob {
 
   private applyStage(stage: StageIndex) {
     if (!this.visual?.active) return; // stale timer guard
+
+    // If a burp animation is in progress, eating food aborts it cleanly.
+    // Resetting isBurping here prevents it from staying true after the tween
+    // chain is killed below, which would permanently block future shrinks.
+    if (this.isBurping) this.isBurping = false;
+
     this.stage = stage;
     const { width, height } = SIZE_STAGES[stage];
 
@@ -96,11 +102,18 @@ export class Blob {
   // ─── Burp / shrink ─────────────────────────────────────────────────────────
 
   private triggerBurp(newStage: StageIndex) {
-    if (this.isBurping) return;
     // Guard: abort if the visual sprite was destroyed by scene teardown.
-    // A stale SizeSystem setTimeout can fire after scene shutdown, and calling
-    // tween/play on a destroyed sprite crashes the game.
     if (!this.visual?.active) return;
+
+    if (this.isBurping) {
+      // A shrink fired while a burp animation is already running (e.g. aggressive mashing).
+      // Skip the animation but still update the physics body so the hitbox is correct.
+      // Phase 4 of the ongoing animation reads sizeSystem.getStage() as the authoritative
+      // final stage, so the visual will be corrected when that animation completes.
+      const { width, height } = SIZE_STAGES[newStage];
+      this.physics.resize(width, height);
+      return;
+    }
     this.isBurping = true;
 
     this.scene.tweens.killTweensOf(this.visual);

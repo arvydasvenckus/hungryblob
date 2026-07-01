@@ -45,21 +45,27 @@ export class PauseScene extends Phaser.Scene {
     const texts = [resume, menu];
 
     const refreshColors = () => {
+      highlight.clear();
       texts.forEach((t, i) => {
         const active = i === selectedOption;
-        t.setColor(i === 0 ? (active ? "#6fdc8c" : "#2a4a36") : (active ? "#e0e8f0" : "#2d3748"));
-        t.setAlpha(active ? 1 : 0.45);
-        t.setScale(active ? 1.1 : 1.0);
+        const bw = 520, bh = 72, br = 12;
+        const bx = GAME_WIDTH / 2 - bw / 2;
+        const by = t.y - bh / 2;
+        if (active) {
+          highlight.fillStyle(0x163824, 0.92);
+          highlight.fillRoundedRect(bx, by, bw, bh, br);
+          highlight.lineStyle(2.5, 0x6fdc8c, 1);
+          highlight.strokeRoundedRect(bx, by, bw, bh, br);
+        } else {
+          highlight.fillStyle(0x111111, 0.5);
+          highlight.fillRoundedRect(bx, by, bw, bh, br);
+          highlight.lineStyle(1.5, 0x3a4a40, 0.5);
+          highlight.strokeRoundedRect(bx, by, bw, bh, br);
+        }
+        t.setColor(i === 0 ? (active ? "#6fdc8c" : "#4a7055") : (active ? "#ccdae5" : "#5a7080"));
+        t.setAlpha(active ? 1 : 0.85);
+        t.setScale(1.0);
       });
-      // Draw highlight bar behind selected option
-      const sel = texts[selectedOption];
-      const pw = 520;
-      const ph = 72;
-      highlight.clear();
-      highlight.fillStyle(0x1a2e20, 0.85);
-      highlight.fillRoundedRect(GAME_WIDTH / 2 - pw / 2, sel.y - ph / 2, pw, ph, 10);
-      highlight.lineStyle(2, 0x6fdc8c, 0.6);
-      highlight.strokeRoundedRect(GAME_WIDTH / 2 - pw / 2, sel.y - ph / 2, pw, ph, 10);
     };
 
     resume.on("pointerover",  () => { selectedOption = 0; refreshColors(); });
