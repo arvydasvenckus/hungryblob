@@ -395,12 +395,12 @@ export class GameScene extends Phaser.Scene {
       this.hideTutHint("move");
     }
 
-    // Zone 2: apple hint — show when Bob approaches the apple
-    if (!shown.has("eat") && bx > 650 && bx < 870) this.showTutHint("eat");
+    // Zone 2: apple hint — show when Bob is ~350px away from the apple (x=800)
+    if (!shown.has("eat") && bx > 450 && bx < 870) this.showTutHint("eat");
     // "eat" hint is hidden by the sizeSystem "grew" handler above (naturally replaced)
 
-    // Zone 3: junk food — show when past the stack
-    if (!shown.has("junk") && bx > 1080) {
+    // Zone 3: junk food — show ~300px before the burger (x=1200), i.e. just past the stack
+    if (!shown.has("junk") && bx > 900) {
       this.showTutHint("junk");
       this.hideTutHint("eat"); // clean up if still showing
     }
@@ -409,8 +409,8 @@ export class GameScene extends Phaser.Scene {
       this.hideTutHint("junk");
     }
 
-    // Zone 5: go-back hint — show at exit when score is below threshold
-    if (!shown.has("goback") && bx > 2200 && this.score < LEVELS[0].scoreThreshold) {
+    // Zone 5: go-back hint — show ~350px before the exit (x≈2304)
+    if (!shown.has("goback") && bx > 1950 && this.score < LEVELS[0].scoreThreshold) {
       this.showTutHint("goback");
     }
     if (shown.has("goback") && this.score >= LEVELS[0].scoreThreshold) {
