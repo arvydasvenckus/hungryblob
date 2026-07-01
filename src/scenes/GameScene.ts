@@ -25,6 +25,11 @@ export class GameScene extends Phaser.Scene {
   private blobWasOnGround = true;
   private lockLabel: Phaser.GameObjects.Text | null = null;
   private exitLocked = false;
+  // Burp mash mechanic
+  private mashKeyZ!: Phaser.Input.Keyboard.Key;
+  private mashKeyX!: Phaser.Input.Keyboard.Key;
+  private lastMashTimeZ = 0;
+  private lastMashTimeX = 0;
   // Tutorial progressive hints
   private tutHints: Map<string, Phaser.GameObjects.Text> = new Map();
   private tutShown: Set<string> = new Set();
@@ -41,6 +46,8 @@ export class GameScene extends Phaser.Scene {
     this.timerSystem = null;
     this.lockLabel = null;
     this.exitLocked = false;
+    this.lastMashTimeZ = 0;
+    this.lastMashTimeX = 0;
     this.tutHints.clear();
     this.tutShown.clear();
   }
@@ -79,6 +86,12 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(240, 160);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
+
+    // Burp mash keys
+    this.mashKeyZ = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+    this.mashKeyX = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    this.mashKeyZ.on("down", () => this.handleMash("Z"));
+    this.mashKeyX.on("down", () => this.handleMash("X"));
 
     if (!this.scene.isActive("UIScene")) {
       this.scene.launch("UIScene");
@@ -267,6 +280,33 @@ export class GameScene extends Phaser.Scene {
       this.scene.stop("UIScene");
       this.scene.start("ResultScene", { score: this.score, win: false, level: this.levelIndex });
     });
+  }
+
+  private handleMash(key: "Z" | "X") {
+    if (this.gameOver || this.levelComplete) return;
+    if (this.sizeSystem.getStage() === 0) return;
+
+    const now = Date.now();
+    const lastTime = key === "Z" ? this.lastMashTimeZ : this.lastMashTimeX;
+    if (now - lastTime < 100) return; // per-key cooldown
+    if (key === "Z") this.lastMashTimeZ = now;
+    else             this.lastMashTimeX = now;
+
+    const stage = this.sizeSystem.getStage();
+    const baseReduction = Math.max(40, Math.floor(220 / (1 + stage * 0.5)));
+    const actual = this.sizeSystem.mashAccelerate(baseReduction);
+    if (actual <= 0) return;
+
+    // Bob squirm — quick squeeze to give physical feedback
+    this.tweens.killTweensOf(this.blob.visual);
+    this.tweens.add({
+      targets: this.blob.visual, scaleX: 1.12,
+      duration: 50, ease: "Back.Out",
+      onComplete: () => this.tweens.add({ targets: this.blob.visual, scaleX: 1, duration: 80 }),
+    });
+
+    // Notify UIScene to flash the Z/X hint and vessel
+    this.scene.get("UIScene")?.events.emit("burp-mash", key);
   }
 
   private openPause() {

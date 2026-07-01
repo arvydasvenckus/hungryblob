@@ -48,6 +48,12 @@ export class UIScene extends Phaser.Scene {
   private activeBubbles = 0;
   private bubbleTimer!: Phaser.Time.TimerEvent;
   private readonly MAX_BUBBLES = 6;
+  // Burp mash hint
+  private mashHintZ!: Phaser.GameObjects.Container;
+  private mashHintX!: Phaser.GameObjects.Container;
+  private mashLabelZ!: Phaser.GameObjects.Text;
+  private mashLabelX!: Phaser.GameObjects.Text;
+  private mashHintActive = false;
 
   constructor() { super({ key: "UIScene" }); }
 
@@ -81,6 +87,11 @@ export class UIScene extends Phaser.Scene {
     // ── Bottom dock ────────────────────────────────────────────────────────
     this.buildDock();
 
+    // ── Mash keycap hints — Z / X keyboard buttons above the vessel ───────────
+    const hintY = DOCK_TOP - 20;
+    [this.mashHintZ, this.mashLabelZ] = this.makeKeyHint(VESSEL_CX - 22, hintY, "Z");
+    [this.mashHintX, this.mashLabelX] = this.makeKeyHint(VESSEL_CX + 22, hintY, "X");
+
     // ── Message overlay ────────────────────────────────────────────────────
     this.messageText = this.add.text(GAME_WIDTH / 2, 520, "", {
       fontSize: "72px", color: "#ffffff", fontFamily: "monospace",
@@ -91,7 +102,8 @@ export class UIScene extends Phaser.Scene {
     this.events.on("update-timer",       (r: number)             => this.setTimer(r));
     this.events.on("update-score",       (s: number)             => this.setScore(s));
     this.events.on("update-stage",       (s: number)             => this.setStage(s));
-    this.events.on("update-cooldown",    (p: number)             => this.setCooldown(p));
+    this.events.on("update-cooldown",    (p: number)             => this.onCooldownUpdate(p));
+    this.events.on("burp-mash",          (key: "Z" | "X")       => this.onMash(key));
     this.events.on("show-message",       (m: string, c?: string) => this.showMessage(m, c));
     this.events.on("hide-timer",         ()                      => this.hideTimer());
     this.events.on("set-score-threshold",(t: number)             => this.setGoal(t));
@@ -380,6 +392,29 @@ export class UIScene extends Phaser.Scene {
   private setStage(stage: number) {
     this.currentStage = stage;
     this.drawStageIcons(stage);
+  }
+
+  /** Wraps setCooldown and also manages mash-hint visibility. */
+  private onCooldownUpdate(pct: number) {
+    const shouldShow = pct > 0.02 && this.currentStage > 0;
+    if (shouldShow !== this.mashHintActive) {
+      this.mashHintActive = shouldShow;
+      const alpha = shouldShow ? 0.55 : 0;
+      this.tweens.add({ targets: [this.mashHintZ, this.mashHintX], alpha, duration: 200 });
+    }
+    this.setCooldown(pct);
+  }
+
+  private onMash(key: "Z" | "X") {
+    const active = key === "Z" ? this.mashHintZ : this.mashHintX;
+    const other  = key === "Z" ? this.mashHintX : this.mashHintZ;
+    this.tweens.killTweensOf(active); this.tweens.killTweensOf(other);
+    active.setColor("#ffffff").setAlpha(1);
+    other.setColor("#555555").setAlpha(0.4);
+    // Fade active back to dim after the flash
+    this.tweens.add({ targets: active, alpha: 0.55, delay: 60, duration: 120 });
+    // Flash vessel with a brief alpha dip
+    this.tweens.add({ targets: this.vesselGfx, alpha: 0.5, duration: 40, yoyo: true });
   }
 
   private setCooldown(pct: number) {

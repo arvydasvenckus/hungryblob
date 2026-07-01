@@ -91,38 +91,25 @@ export const LEVELS: LevelConfig[] = [
     scoreThreshold: 300, // exit locked until 300 pts collected
     name: "The Squeeze",
     playerStart: { x: 80, y: 514 },
-    // Open sections:
-    //   Section 1: x=32-400
-    //   Section 2: x=680-950
-    //   Section 3: x=1200-1500
-    //   Section 4: x=1780-2168
-    // FOOD RULE: NEVER inside a duct — only in open zones or on open platforms.
-    // Open zones:
-    //   x=32-300   (before first duct)
-    //   elevated platform x=640-1050 y=416 (open above, ductless)
-    //   x=1050-1280 (between duct and vertical wall approach)
-    //   x=1382-1650 (after vertical wall, before staircase)
-    //   step B platform x=1770-1890, y=408 (open above)
-    //   x=2400-2968 (final sprint)
+    // FOOD RULE: NEVER inside a duct — only in open zones or platform open edges.
+    // Open zones (redesigned level):
+    //   x=32-350    Zone 1 floor (no ceiling)
+    //   x=1050-1130 Left open edge of mid platform y=420 (before mid ceiling at x=1130)
+    //   x=1050-1500 Floor under zone 4 (no floor-level beam in zone 4)
+    //   x=2200-2950 Zone 7 sprint (open floor)
     foods: [
-      // Zone 1: open start
-      { x: 150,  y: 500, type: "apple"      }, // +1 → stage 1
-      { x: 280,  y: 500, type: "grapes"     }, // +1 → stage 2  (risky: GAP_A needs stage ≤1)
+      // Zone 1 — open floor
+      { x: 150,  y: 500, type: "apple"      }, // +1 → stage 1; 50 pts
 
-      // Zone 2: elevated platform (open above — no ceiling, food safe to grow here)
-      { x: 800,  y: 392, type: "pizza"      }, // +2  only accessible if Bob jumps to platform
+      // Zone 4 floor — open (tempting junk food in the clear middle section)
+      { x: 1150, y: 500, type: "burger"     }, // +2 → stage 3; 100 pts
 
-      // Zone 3: open relief
-      { x: 1150, y: 500, type: "burger"     }, // +2  tempting before vertical wall
+      // Zone 4 mid platform open left edge (x=1050–1130, before mid ceiling)
+      // food center y = 420 - 24 = 396. No ceiling above at x=1080. Safe to grow ✓
+      { x: 1080, y: 396, type: "watermelon" }, // +1; 50 pts. Requires jumping to mid lane.
 
-      // Zone 4: after vertical wall
-      { x: 1500, y: 500, type: "donut"      }, // +2
-
-      // Zone 5: stair step B (open above)
-      { x: 1830, y: 384, type: "watermelon" }, // +1  only accessible if Bob reaches step B
-
-      // Zone 6: final sprint
-      { x: 2550, y: 500, type: "orange"     }, // +1  bonus before exit
+      // Zone 7 — final sprint bonus
+      { x: 2400, y: 500, type: "orange"     }, // +1; 50 pts
     ],
   },
 

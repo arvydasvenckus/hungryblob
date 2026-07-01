@@ -79,6 +79,19 @@ export class SizeSystem {
     }
   }
 
+  /** Shave `amount` ms off the current burp countdown.
+   *  No-ops if no timer is running. Returns actual ms removed. */
+  mashAccelerate(amount: number): number {
+    if (this.shrinkTimer === null || this.stage === 0) return 0;
+    const remaining = this.getShrinkCooldownRemaining();
+    const actual = Math.min(amount, Math.max(0, remaining - 80)); // leave ≥80ms
+    if (actual <= 0) return 0;
+    clearTimeout(this.shrinkTimer);
+    this.lastEatTime = this.getTime() - (SHRINK_COOLDOWN_MS - (remaining - actual));
+    this.shrinkTimer = setTimeout(() => this.shrink(), remaining - actual);
+    return actual;
+  }
+
   getStage(): StageIndex { return this.stage; }
 
   getShrinkCooldownRemaining(): number {

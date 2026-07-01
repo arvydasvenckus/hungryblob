@@ -149,27 +149,27 @@ export function buildLevel1(scene: Phaser.Scene): LevelObjects {
 // Level 1 — "The Squeeze"   (kitchen theme, timed, challenging)
 // ─────────────────────────────────────────────────────────────────────────────
 /**
- * Two GAP_A ducts + one GAP_B duct force players to manage Bob's size carefully.
+ * Three elevation lanes create stacked ceiling beams and vertical travel:
+ *
+ *   Floor  lane: y=528  — always open
+ *   Mid    lane: y=420  — stages 0–3 jump from floor (rise=108px; stage 4: 91px, just short)
+ *   High   lane: y=340  — stages 0–4 jump from mid (rise=80px); stage 0 only from floor (rise=188px)
  *
  * Gap physics:
- *   GAP_A = 56px  → stage 1 (47px) fits, stage 2 (66px) blocked
- *   GAP_B = 75px  → stage 2 (66px) fits, stage 3 (85px) blocked
+ *   GAP_A = 56px  → stage 0–1 fit,   stage 2 blocked
+ *   GAP_B = 75px  → stage 0–2 fit,   stage 3 blocked
+ *   GAP_C = 94px  → stage 0–3 fit,   stage 4 blocked
  *
- * Open sections (food-safe zones):
- *   Section 1: x=32-400
- *   Section 2: x=680-950
- *   Section 3: x=1200-1500
- * Layout (see plan for details):
- *   x=32-300   Open start
- *   x=300-640  GAP_B floor duct (stages 0–2)
- *   x=640-1050 Dual path: GAP_A floor duct (stages 0–1) + elevated platform bypass (stages 0–2)
- *   x=1050-350 Open relief
- *   x=1350-382 Vertical wall with 75px horizontal gap (stages 0–2 can pass)
- *   x=1650-900 Staircase: step A y=452, step B y=408
- *   x=2100-400 GAP_C floor duct (stages 0–3)
- *   x=2400-950 Final sprint + exit
+ * Layout:
+ *   x=32–350    Zone 1: open start
+ *   x=350–650   Zone 2: single floor GAP_B beam (stages 0–2)
+ *   x=650–1050  Zone 3: DUAL LAYER — floor GAP_A + mid platform y=420 with GAP_B ceiling
+ *   x=1050–1500 Zone 4: TRIPLE LAYER — floor open + mid y=420 + high y=340, each with ceiling
+ *   x=1500–1900 Zone 5: descending steps high→mid→floor + vertical wall
+ *   x=1900–2200 Zone 6: GAP_C floor duct (stages 0–3)
+ *   x=2200–2950 Zone 7: final sprint + exit
  *
- * Food rule: NEVER inside a duct (all food in open zones or on open platforms).
+ * Food rule: NEVER inside a duct (all food in open zones or open platform edges).
  */
 export const LEVEL2_WIDTH  = 3000;
 export const LEVEL2_HEIGHT = 560;
@@ -177,19 +177,22 @@ export const LEVEL2_HEIGHT = 560;
 export function buildLevel2(scene: Phaser.Scene): LevelObjects {
   const T2     = TILE_SIZE;
   const FLOOR2 = LEVEL2_HEIGHT - T2; // 528
-  const GAP_A  = 56;  // allows stage 1 (47px),  blocks stage 2 (66px)
-  const GAP_B  = 75;  // allows stage 2 (66px),  blocks stage 3 (85px)
-  const GAP_C  = 94;  // allows stage 3 (85px),  blocks stage 4 (104px)
+  const GAP_A  = 56;  // stage 0–1 fit,  stage 2 (66px) blocked
+  const GAP_B  = 75;  // stage 0–2 fit,  stage 3 (85px) blocked
+  const GAP_C  = 94;  // stage 0–3 fit,  stage 4 (104px) blocked
+
+  // Elevation lanes
+  const MID_Y  = 420; // mid platform top  (rise 108px from floor; stages 0–3)
+  const HIGH_Y = 340; // high platform top (rise 80px from mid;   stages 0–4)
 
   const platforms = scene.physics.add.staticGroup();
 
-  // Background — warm kitchen palette
   const bg = scene.add.graphics();
   bg.fillStyle(0x2c1810, 1);
   bg.fillRect(0, 0, LEVEL2_WIDTH, LEVEL2_HEIGHT);
   drawKitchenBg(bg, LEVEL2_WIDTH, LEVEL2_HEIGHT);
 
-  // ── Wall helper (warm cast-iron look) ──────────────────────────────────────
+  // ── Wall helper ─────────────────────────────────────────────────────────────
   function wall2(x: number, y: number, w: number, h: number, isRaised = false) {
     const g = scene.add.graphics();
     const baseColor = isRaised ? 0x8B7355 : 0x4a3728;
@@ -209,54 +212,93 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
     platforms.add(img);
   }
 
-  // Floor-level horizontal duct ceiling
-  function ductCeiling2(x: number, gap: number, width: number, thickness = T2) {
-    wall2(x, FLOOR2 - gap - thickness, width, thickness);
+  // Floor-level ceiling duct
+  function ductCeiling2(x: number, gap: number, width: number) {
+    wall2(x, FLOOR2 - gap - T2, width, T2);
   }
 
-  // Vertical wall with a horizontal passage (gap from gapTop to gapBottom)
+  // Elevated duct: platform + ceiling slab at gap distance above it
+  // openLeft / openRight = px to leave uncovered at each edge (food-safe zones)
+  function elevatedDuct(x: number, platformY: number, gap: number, width: number,
+                        openLeft = 0, openRight = 0) {
+    wall2(x, platformY, width, T2, true);                           // platform floor
+    const ceilX = x + openLeft;
+    const ceilW = width - openLeft - openRight;
+    if (ceilW > 0) wall2(ceilX, platformY - gap - T2, ceilW, T2);  // ceiling slab
+  }
+
+  // Vertical wall with horizontal passage
   function vertWall(x: number, gapTop: number, gapBottom: number) {
-    if (gapTop > 0) wall2(x, 0, T2, gapTop);              // upper section
-    if (gapBottom < FLOOR2) wall2(x, gapBottom, T2, FLOOR2 - gapBottom); // lower section
+    if (gapTop > 0)         wall2(x, 0,          T2, gapTop);
+    if (gapBottom < FLOOR2) wall2(x, gapBottom,  T2, FLOOR2 - gapBottom);
   }
 
   // ── Boundaries ─────────────────────────────────────────────────────────────
-  wall2(0,                0,       T2,            LEVEL2_HEIGHT);
-  wall2(LEVEL2_WIDTH - T2, 0,      T2,            LEVEL2_HEIGHT);
-  wall2(0,                0,       LEVEL2_WIDTH,  T2);
-  wall2(0,                FLOOR2,  LEVEL2_WIDTH,  T2);
+  wall2(0,                0,      T2,           LEVEL2_HEIGHT);
+  wall2(LEVEL2_WIDTH - T2, 0,     T2,           LEVEL2_HEIGHT);
+  wall2(0,                0,      LEVEL2_WIDTH, T2);
+  wall2(0,                FLOOR2, LEVEL2_WIDTH, T2);
 
-  // ── Zone 1: GAP_B floor duct (x=300–640, stages 0–2) ─────────────────────
-  ductCeiling2(300, GAP_B, 340);
+  // ── Zone 1 (x=32–350): open start ─────────────────────────────────────────
+  // (food: apple at x=150)
 
-  // ── Zone 2: Dual path (x=640–1050) ────────────────────────────────────────
-  //    Floor path:    GAP_A duct — only stages 0–1 can walk through
-  //    Elevated path: open platform at y=416 — stages 0–2 can jump to it
-  //                   (rise=112px; stage 3 jump=102px, just short)
-  //    Stage 2 MUST take the elevated path. Stage 3+ blocked by both → burp first.
-  ductCeiling2(640, GAP_A, 410);          // floor-level narrow duct ceiling
-  wall2(640, 416, 410, T2, true);         // elevated platform (top at y=416)
+  // ── Zone 2 (x=350–650): single floor GAP_B beam ───────────────────────────
+  // One beam at floor level. Stages 0–2 walk through.
+  ductCeiling2(350, GAP_B, 300);
 
-  // ── Zone 3: Open relief (x=1050–1280) ────────────────────────────────────
-  // (food + breathing room)
+  // ── Zone 3 (x=650–1050): DUAL LAYER ──────────────────────────────────────
+  //
+  //   y=313  ─────────────  mid ceiling  (GAP_B above mid platform)
+  //   y=345    (gap 75px)
+  //   y=420  ═════════════  mid platform
+  //   y=440  ─────────────  floor ceiling (GAP_A)
+  //   y=472    (gap 56px)
+  //   y=528                 floor
+  //
+  // Floor path: stages 0–1 only (GAP_A=56)
+  // Mid path:   jump to y=420 (stages 0–3) + pass GAP_B ceiling (stages 0–2)
+  // Stage 3+:   blocked both ways → burp first
+  ductCeiling2(650, GAP_A, 400);                           // floor beam
+  elevatedDuct(650, MID_Y, GAP_B, 400, 0, 0);             // mid platform + mid ceiling
 
-  // ── Zone 4: Vertical wall with horizontal gap (x=1350, y=377–452) ─────────
-  //    Stepping platform at y=452 on the left (rise=76px, stages 0–4 can reach)
-  //    Gap = 75px (GAP_B): stages 0–2 can pass through while on the platform
-  //    Stage 3 (85px): body top = 452−85=367 < 377 → hits upper wall → blocked
-  //    Stage 4+ can't even reach the platform (jump < 76px)
-  wall2(1280, 452, 70, T2, true);         // left stepping platform
-  vertWall(1350, 377, 452);              // vertical wall with 75px gap
-  // The right side lower wall top (y=452) acts as exit ledge; Bob drops to floor
+  // ── Zone 4 (x=1050–1500): TRIPLE LAYER ───────────────────────────────────
+  //
+  //   y=233  ─────────────  high ceiling (GAP_B above high platform)
+  //   y=265    (gap 75px)
+  //   y=340  ═════════════  high platform (step from mid: rise=80px, stages 0–4)
+  //   y=313  ─────────────  mid ceiling  (GAP_B above mid platform)
+  //   y=345    (gap 75px)
+  //   y=420  ═════════════  mid platform (rise=108px from floor, stages 0–3)
+  //   y=528                 floor — OPEN (food zone, no floor beam here)
+  //
+  // Open edges: 80px at each side of each platform before ceiling starts,
+  //             giving food-safe zones and visible "entry/exit" indicators.
+  const Z4_LEFT  = 1050;
+  const Z4_RIGHT = 1500;
+  const Z4_W     = Z4_RIGHT - Z4_LEFT; // 450
 
-  // ── Zone 5: Staircase (x=1650–1890) ──────────────────────────────────────
-  //    Step A: y=452, rise=76px (stages 0–4)
-  //    Step B: y=408, rise=120px from floor (stage 2 jump=125px — just reaches)
-  wall2(1650, 452, 120, T2, true);        // step A
-  wall2(1770, 408, 120, T2, true);        // step B
+  // Mid lane: platform x=1050–1500, ceiling x=1130–1420 (80px open each side)
+  elevatedDuct(Z4_LEFT, MID_Y, GAP_B, Z4_W, 80, 80);
 
-  // ── Zone 6: GAP_C floor duct (x=2100–2400, stages 0–3) ───────────────────
-  ductCeiling2(2100, GAP_C, 300);
+  // High lane: platform x=1180–1450, ceiling x=1250–1380 (70px open each side)
+  // Accessible only by stepping up from mid (rise=80px, stages 0–4)
+  elevatedDuct(1180, HIGH_Y, GAP_B, 270, 70, 70);
+
+  // ── Zone 5 (x=1500–1900): descending steps + vertical wall ────────────────
+  //
+  // Staircase descends: high → mid → floor
+  // Step A: bridge from high (y=340) to mid (y=420) zone
+  wall2(1500, 380, 140, T2, true);   // intermediate step y=380 (high→mid bridge)
+  wall2(1640, 436, 120, T2, true);   // step down toward floor y=436
+  // Vertical wall with GAP_B gap — stages 0–2 pass (stepping platform at y=436)
+  vertWall(1760, 361, 436);           // gap: y=361–436 = 75px
+  // (Bob drops from x=1760 right side back to floor)
+
+  // ── Zone 6 (x=1900–2200): GAP_C floor duct (stages 0–3) ──────────────────
+  ductCeiling2(1900, GAP_C, 300);
+
+  // ── Zone 7 (x=2200–2950): final sprint ───────────────────────────────────
+  // (food + exit — open)
 
   // ── EXIT ──────────────────────────────────────────────────────────────────
   const exitX = LEVEL2_WIDTH - T2 * 3;
@@ -278,11 +320,10 @@ export function buildLevel2(scene: Phaser.Scene): LevelObjects {
     fontSize: "13px", color: "#c9956a", fontFamily: "monospace",
     stroke: "#000", strokeThickness: 2, align: "center",
   };
-  scene.add.text(310, FLOOR2 - 68, "Tighten up →", { ...hs }).setOrigin(0, 0.5);
-  scene.add.text(648, FLOOR2 - 68, "Jump up or squeeze!", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
-  scene.add.text(1290, FLOOR2 - 60, "Jump & fit the gap →", { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
-  scene.add.text(1660, FLOOR2 - 68, "Staircase ↑", { ...hs }).setOrigin(0, 0.5);
-  scene.add.text(2108, FLOOR2 - 68, "Big squeeze →", { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
+  scene.add.text(360, FLOOR2 - 68, "Squeeze! →",        { ...hs }).setOrigin(0, 0.5);
+  scene.add.text(660, FLOOR2 - 68, "Two paths! ↑ or →", { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
+  scene.add.text(1060, FLOOR2 - 68, "Go high for bonus →", { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
+  scene.add.text(1910, FLOOR2 - 68, "Big squeeze →",    { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
   scene.add.text(exitX + T2 * 0.75, exitY - 22, "EXIT ▼",
     { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 })
     .setOrigin(0.5);
