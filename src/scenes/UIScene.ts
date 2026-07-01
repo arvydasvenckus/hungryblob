@@ -102,30 +102,48 @@ export class UIScene extends Phaser.Scene {
   // ─── Dock construction ────────────────────────────────────────────────────
 
   private buildDock() {
-    // Dock background — diner chrome rail style
     const bg = this.add.graphics().setDepth(2);
-    const rx = 20; // corner radius
+    const rx = 14;
 
-    // Outer shadow/depth
-    bg.fillStyle(0x2c1810, 0.7);
-    bg.fillRoundedRect(DOCK_LEFT + 3, DOCK_TOP + 3, DOCK_W, DOCK_H, rx);
+    // Drop shadow — gives the panel lift off the background
+    bg.fillStyle(0x000000, 0.55);
+    bg.fillRoundedRect(DOCK_LEFT + 4, DOCK_TOP + 5, DOCK_W, DOCK_H, rx);
 
-    // Main chrome body
-    bg.fillStyle(DINER_CHROME, 0.92);
+    // Main panel — dark lacquered countertop
+    bg.fillStyle(0x1a1208, 1);
     bg.fillRoundedRect(DOCK_LEFT, DOCK_TOP, DOCK_W, DOCK_H, rx);
 
-    // Red accent stripe along top edge (diner rail)
-    bg.fillStyle(DINER_RED, 0.85);
-    bg.fillRoundedRect(DOCK_LEFT, DOCK_TOP, DOCK_W, 8, { tl: rx, tr: rx, bl: 0, br: 0 });
+    // Warm wood-grain mid tone — very subtle texture strip
+    bg.fillStyle(0x2a1e10, 0.6);
+    bg.fillRoundedRect(DOCK_LEFT + 2, DOCK_TOP + DOCK_H * 0.35,
+      DOCK_W - 4, DOCK_H * 0.3, 4);
 
-    // Inner highlight
-    bg.fillStyle(0xffffff, 0.18);
-    bg.fillRoundedRect(DOCK_LEFT + 4, DOCK_TOP + 10, DOCK_W - 8, 16, 6);
+    // Top highlight (light catching the panel edge)
+    bg.fillStyle(0xffd080, 0.12);
+    bg.fillRoundedRect(DOCK_LEFT + 3, DOCK_TOP + 2, DOCK_W - 6, 6, 4);
 
-    // Subtle vertical separator before vessel
+    // Amber/gold border — game HUD frame doubles as diner trim
+    bg.lineStyle(3, 0xb8860b, 0.9);
+    bg.strokeRoundedRect(DOCK_LEFT, DOCK_TOP, DOCK_W, DOCK_H, rx);
+
+    // Inner bevel — second thinner inset line gives depth
+    bg.lineStyle(1, 0x7a5c00, 0.4);
+    bg.strokeRoundedRect(DOCK_LEFT + 4, DOCK_TOP + 4, DOCK_W - 8, DOCK_H - 8, rx - 4);
+
+    // Recessed panel for stage icons
+    bg.fillStyle(0x0a0804, 0.7);
+    bg.fillRoundedRect(ICONS_LEFT - 6, DOCK_TOP + 10,
+      STAGE_W + 12, DOCK_H - 20, 8);
+
+    // Recessed panel for vessel
+    bg.fillStyle(0x0c0a06, 0.7);
+    bg.fillRoundedRect(VESSEL_CX - VESSEL_W / 2 - 8, DOCK_TOP + 6,
+      VESSEL_W + 16, DOCK_H - 12, 8);
+
+    // Vertical separator — gold trim line
     const sepX = DOCK_LEFT + DOCK_PAD + STAGE_W + SEP_GAP / 2;
-    bg.lineStyle(2, 0x8b7355, 0.5);
-    bg.beginPath(); bg.moveTo(sepX, DOCK_TOP + 14); bg.lineTo(sepX, DOCK_BOTTOM - 14); bg.strokePath();
+    bg.lineStyle(2, 0xb8860b, 0.5);
+    bg.beginPath(); bg.moveTo(sepX, DOCK_TOP + 12); bg.lineTo(sepX, DOCK_BOTTOM - 12); bg.strokePath();
 
     this.dockBg = bg;
 
@@ -151,49 +169,58 @@ export class UIScene extends Phaser.Scene {
   private drawStageIcons(stage: number) {
     this.stageIconGfx.clear();
 
+    // Base icon size = 40px for stage 0, grows +2px per stage up to stage 7 (54px).
+    // Icons are bottom-aligned so they grow upward from a common baseline.
+    const BASE_SZ  = 40;
+    const SZ_STEP  = 2;
+    const BASELINE = DOCK_CY + DOCK_H * 0.28; // shared bottom edge for all icons
+
+    // Recalculate icon x positions based on their individual sizes so they're
+    // evenly spaced using the average icon width as the slot width.
+    const SLOT_W = BASE_SZ + (STAGE_COUNT - 1) * SZ_STEP + ICON_GAP; // ~58px per slot
+
     for (let i = 0; i < STAGE_COUNT; i++) {
-      const ix = ICONS_LEFT + i * (ICON_SIZE + ICON_GAP) + ICON_SIZE / 2;
-      const iy = DOCK_CY;
-      const r  = ICON_SIZE * 0.35; // corner radius to match Bob
+      const sz = BASE_SZ + i * SZ_STEP;           // 40, 42, 44 … 54
+      const r  = sz * 0.32;                        // corner radius scales with size
+      const c  = STAGE_COLORS[i];
+
+      // Centre-of-slot x — slots are SLOT_W apart from ICONS_LEFT
+      const slotCx = ICONS_LEFT + i * (BASE_SZ + SZ_STEP + ICON_GAP) + (BASE_SZ + i * SZ_STEP) / 2;
+      // Bottom-align: top-left y = baseline - sz
+      const iy = BASELINE - sz;
 
       if (i < stage) {
-        // Past stages: dimmer, filled
-        const c = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
-        this.stageIconGfx.fillStyle(c, 0.35);
-        this.stageIconGfx.fillRoundedRect(ix - ICON_SIZE / 2, iy - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE, r);
-        this.stageIconGfx.lineStyle(2, c, 0.5);
-        this.stageIconGfx.strokeRoundedRect(ix - ICON_SIZE / 2, iy - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE, r);
+        // Past stages: dim fill, stage-colored outline
+        this.stageIconGfx.fillStyle(c, 0.28);
+        this.stageIconGfx.fillRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
+        this.stageIconGfx.lineStyle(2, c, 0.55);
+        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
       } else if (i === stage) {
-        // Current stage: bright + slightly larger
-        const c = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
-        const sz = ICON_SIZE + 8;
+        // Current stage: full brightness, stage-colored border + inner glow
         this.stageIconGfx.fillStyle(c, 1);
-        this.stageIconGfx.fillRoundedRect(ix - sz / 2, iy - sz / 2, sz, sz, r + 2);
-        // Inner shine
-        this.stageIconGfx.fillStyle(0xffffff, 0.25);
-        this.stageIconGfx.fillEllipse(ix - sz * 0.12, iy - sz * 0.15, sz * 0.35, sz * 0.22);
-        // Border
-        this.stageIconGfx.lineStyle(3, 0xffffff, 0.6);
-        this.stageIconGfx.strokeRoundedRect(ix - sz / 2, iy - sz / 2, sz, sz, r + 2);
+        this.stageIconGfx.fillRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
+        // Inner highlight shine
+        this.stageIconGfx.fillStyle(0xffffff, 0.28);
+        this.stageIconGfx.fillEllipse(slotCx - sz * 0.1, iy + sz * 0.18, sz * 0.38, sz * 0.2);
+        // Stage-color border
+        this.stageIconGfx.lineStyle(3, c, 1);
+        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
+        // Outer glow ring (slightly larger, semi-transparent)
+        this.stageIconGfx.lineStyle(5, c, 0.28);
+        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2 - 3, iy - 3, sz + 6, sz + 6, r + 3);
       } else {
-        // Future stages: dim outline
-        this.stageIconGfx.lineStyle(2, 0x8b7355, 0.4);
-        this.stageIconGfx.strokeRoundedRect(ix - ICON_SIZE / 2, iy - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE, r);
+        // Future stages: just the outline at the per-stage color, very dim
+        this.stageIconGfx.lineStyle(2, c, 0.22);
+        this.stageIconGfx.strokeRoundedRect(slotCx - sz / 2, iy, sz, sz, r);
       }
-
-      // Stage number inside icon
-      if (i <= stage) {
-        this.stageIconGfx.fillStyle(0x1a1a2e, i === stage ? 0.8 : 0.5);
-        // Small dot at bottom-centre to indicate index
-        this.stageIconGfx.fillCircle(ix, iy + ICON_SIZE * 0.28, 3);
-      }
+      // No dot indicator — removed as requested
     }
   }
 
   // ─── Soda vessel (diner theme) ────────────────────────────────────────────
 
   private drawVessel(fill: number) {
-    // fill: 0 = empty, 1 = full (ready to burp)
+    // fill = pct: 1 = full (just ate), 0 = empty (ready to burp)
     this.vesselGfx.clear();
 
     const cx   = VESSEL_CX;
@@ -213,20 +240,30 @@ export class UIScene extends Phaser.Scene {
     const topL  = vl;
     const topR  = vl + topW;
 
-    // Soda fill inside glass
+    // Soda fill — tapered trapezoid matching the glass shape
+    // fill = 1 (just ate, full glass) → fill = 0 (digested, empty, ready to burp)
     if (fill > 0.01) {
-      const fillH     = (vh - 10) * fill; // leave a little space at the bottom
-      const fillT     = vt + vh - 10 - fillH;
-      // Interpolate fill color: dark cola amber → lighter as foam at top
-      const fillAlpha = 0.85;
-      // Draw soda body (cola-colored)
-      this.vesselGfx.fillStyle(0x6d2b2b, fillAlpha);   // deep cola
-      this.vesselGfx.fillRect(vl + 3, fillT, vw - 6, fillH);
+      const usableH   = vh - 10;                     // drawable interior height
+      const fillH     = usableH * fill;
+      const fillBotY  = vt + vh - 10;                // bottom of fill area
+      const fillTopY  = fillBotY - fillH;
 
-      // Foam/head layer at top of fill (cream colored)
-      if (fill > 0.15) {
-        this.vesselGfx.fillStyle(SODA_FOAM, 0.7);
-        this.vesselGfx.fillEllipse(cx, fillT + 4, vw - 8, 12);
+      // Width at the fill top: linearly interpolated between botW and topW
+      const widthAtFill = botW + (topW - botW) * (fillH / usableH);
+
+      // Tapered fill polygon — clockwise
+      this.vesselGfx.fillStyle(0x6d2b2b, 0.88);
+      this.vesselGfx.fillPoints([
+        { x: cx - botW / 2,        y: fillBotY },
+        { x: cx + botW / 2,        y: fillBotY },
+        { x: cx + widthAtFill / 2, y: fillTopY },
+        { x: cx - widthAtFill / 2, y: fillTopY },
+      ], true);
+
+      // Foam/head layer at top of fill
+      if (fill > 0.12) {
+        this.vesselGfx.fillStyle(SODA_FOAM, 0.65);
+        this.vesselGfx.fillEllipse(cx, fillTopY + 5, widthAtFill - 4, 11);
       }
     }
 
@@ -260,13 +297,13 @@ export class UIScene extends Phaser.Scene {
     this.vesselGfx.lineTo(botL + 6, vt + vh - 6);
     this.vesselGfx.strokePath();
 
-    // "Full" indicator: red glow at rim when ready to burp
-    if (fill > 0.9) {
+    // "Ready to burp" indicator: glass glows red when nearly empty (fill ≈ 0)
+    if (fill < 0.12 && fill > 0) {
       const pulse = 0.4 + 0.5 * Math.abs(Math.sin(Date.now() * 0.004));
       this.vesselGfx.lineStyle(4, 0xe74c3c, pulse);
       this.vesselGfx.beginPath();
-      this.vesselGfx.moveTo(topL - 4, vt);
-      this.vesselGfx.lineTo(topR + 4, vt);
+      this.vesselGfx.moveTo(botL - 2, vt + vh);
+      this.vesselGfx.lineTo(botR + 2, vt + vh);
       this.vesselGfx.strokePath();
     }
 
@@ -352,8 +389,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   private setCooldown(pct: number) {
-    // pct = remaining/total. Fill is inverse: 0 just after eating, 1 = ready to burp.
-    this.currentFill = pct > 0 ? 1 - pct : 0;
+    // pct = remaining/total. Fill = pct directly:
+    //   pct=1 → glass full (just ate, lots of time left)
+    //   pct=0 → glass empty (digested, ready to burp)
+    this.currentFill = pct;
     this.drawVessel(this.currentFill);
   }
 

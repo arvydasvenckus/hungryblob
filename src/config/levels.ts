@@ -125,4 +125,52 @@ export const LEVELS: LevelConfig[] = [
       { x: 2550, y: 500, type: "orange"     }, // +1  bonus before exit
     ],
   },
+
+  // ── Index 2: Level 2 — "Sewer Depths" ────────────────────────────────────
+  {
+    key: "level2",
+    timeLimit: 75,
+    music: "level",
+    scoreThreshold: 400,
+    name: "Sewer Depths",
+    playerStart: { x: 80, y: 514 },
+    // Food rule: NEVER inside a duct or under any ceiling.
+    // Open zones:
+    //   x=32-400    (open start, S1)
+    //   Step C platform y=320 (open above, S2)
+    //   x=820-1350  (S4 — platform tops are open above)
+    //   x=1380-1640 (wide platform + open floor before duct, S6)
+    //   x=1950-2450 (post-duct platforms + open floor, S7)
+    //   x=2560-3700 (final sprint, S9)
+    foods: [
+      // S1: open start — safe first eat
+      { x: 200,  y: 500, type: "apple"      }, // +1 → stage 1;  50pts
+
+      // S2: top of triple tower (Step C y=320) — reward for climbing
+      { x: 700,  y: 296, type: "grapes"     }, // +1 → stage 2;  50pts
+
+      // S4: Plat A (y=416, rise=112px — only stages 0–2 reach)
+      // Junk food as a high-risk high-reward choice when small
+      { x: 930,  y: 392, type: "pizza"      }, // +2 → stage 3+; 100pts
+
+      // S4: Plat C (y=432, rise=96px — stages 0–3)
+      { x: 1210, y: 408, type: "strawberry" }, // +1;  50pts
+
+      // S6: wide platform (y=432, open above)
+      { x: 1500, y: 408, type: "burger"     }, // +2;  100pts
+
+      // S7: Plat D (y=416, rise=112px — stages 0–2)
+      { x: 2060, y: 392, type: "watermelon" }, // +1;  50pts
+
+      // S7: open floor — tempting junk before Wall 3
+      { x: 2300, y: 500, type: "donut"      }, // +2;  100pts
+
+      // S9: final sprint — healthy padding toward threshold
+      { x: 2700, y: 500, type: "orange"     }, // +1;  50pts
+      { x: 3100, y: 500, type: "carrot"     }, // +1;  50pts
+
+      // S9: bonus platform (y=448, open above) — optional last push
+      { x: 3370, y: 424, type: "cake"       }, // +2;  100pts
+    ],
+  },
 ];

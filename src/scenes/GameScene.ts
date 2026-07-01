@@ -7,7 +7,7 @@ import { TimerSystem } from "../systems/TimerSystem";
 import { SoundSystem } from "../systems/SoundSystem";
 import { Blob } from "../entities/Blob";
 import { Food } from "../entities/Food";
-import { buildLevel1, buildLevel2, LEVEL_HEIGHT } from "./LevelBuilder";
+import { buildLevel1, buildLevel2, buildLevel3, LEVEL_HEIGHT } from "./LevelBuilder";
 
 export class GameScene extends Phaser.Scene {
   private blob!: Blob;
@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
 
     // Select the correct level builder
     const { platforms, exitZone, levelWidth, levelHeight } =
-      this.levelIndex === 0 ? buildLevel1(this) : buildLevel2(this);
+      ([buildLevel1, buildLevel2, buildLevel3][this.levelIndex] ?? buildLevel3)(this);
     this.exitZone = exitZone;
 
     this.physics.world.setBounds(0, 0, levelWidth, levelHeight);

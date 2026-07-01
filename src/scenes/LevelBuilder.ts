@@ -331,6 +331,215 @@ function drawKitchenBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
   g.fillRect(0, h - 70, w, 6);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Level 3 — "Sewer Depths"   (cave theme, multi-tier platforms, three wall gaps)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Three escalating vertical-wall challenges (floor, mid, elevated gaps)
+ * combined with an ascending and descending platform tower.
+ *
+ * Gap physics (body height must fit inside gap):
+ *   84px gap — stages 0–2 (≤66px) pass; stage 3 (85px) blocked
+ *   72px gap — stages 0–2 (≤66px) pass; stage 3 blocked
+ *   80px gap — stages 0–2 (≤66px) pass; stage 3 blocked
+ *
+ * Vertical-wall mid-height gaps need a stepping platform on the left so Bob
+ * can stand with his feet at gapBottom and walk through.
+ *
+ * Platform height design:
+ *   Step A  y=448  rise=80px from floor  (stages 0–4 reach)
+ *   Step B  y=384  rise=64px from A      (stages 0–5 from A)
+ *   Step C  y=320  rise=64px from B
+ *   Plat A  y=416  rise=112px from floor (stages 0–2 only)
+ *   Plat B  y=464  rise=64px  from floor (stages 0–5)
+ *   Plat C  y=432  rise=96px  from floor (stages 0–3)
+ *   Plat D  y=416  rise=112px from floor (stages 0–2 only)
+ *   Bonus   y=448  rise=80px  from floor (stages 0–4)
+ */
+
+export const LEVEL3_WIDTH  = 4000;
+export const LEVEL3_HEIGHT = 560;
+
+export function buildLevel3(scene: Phaser.Scene): LevelObjects {
+  const T3     = TILE_SIZE;
+  const FLOOR3 = LEVEL3_HEIGHT - T3; // 528
+
+  const platforms = scene.physics.add.staticGroup();
+
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x0d1a0f, 1);
+  bg.fillRect(0, 0, LEVEL3_WIDTH, LEVEL3_HEIGHT);
+  drawCaveBg(bg, LEVEL3_WIDTH, LEVEL3_HEIGHT);
+
+  // ── Platform helper — dark stone-green sewer blocks ────────────────────────
+  function wall3(x: number, y: number, w: number, h: number, raised = false) {
+    const g = scene.add.graphics();
+    const base = raised ? 0x1e4a30 : 0x1c3a2a;
+    g.fillStyle(base, 1);
+    g.fillRect(0, 0, w, h);
+    // Top highlight
+    g.fillStyle(0x2e6b47, 0.8); g.fillRect(0, 0, w, 3);
+    // Left edge
+    g.fillStyle(0x3a8a5a, 0.25); g.fillRect(0, 0, 2, h);
+    // Rivets / texture
+    if (w > 64) {
+      g.fillStyle(0x2e6b47, 0.4);
+      for (let rx = 16; rx < w - 16; rx += 52) g.fillCircle(rx, h / 2, 3.5);
+    }
+    // Bottom drip shadow
+    g.fillStyle(0x050e07, 0.35); g.fillRect(0, h - 3, w, 3);
+    const key = `l3_wall_${x}_${y}_${w}_${h}`;
+    g.generateTexture(key, w, h);
+    g.destroy();
+    const img = scene.physics.add.staticImage(x + w / 2, y + h / 2, key);
+    img.setDisplaySize(w, h); img.refreshBody();
+    platforms.add(img);
+  }
+
+  // Floor-level horizontal duct ceiling
+  function ductCeiling3(x: number, gap: number, width: number, thickness = T3) {
+    wall3(x, FLOOR3 - gap - thickness, width, thickness);
+  }
+
+  // Vertical wall with a horizontal-passage gap
+  function vertWall3(x: number, gapTop: number, gapBottom: number) {
+    if (gapTop > 0)      wall3(x, 0,        T3, gapTop);
+    if (gapBottom < FLOOR3) wall3(x, gapBottom, T3, FLOOR3 - gapBottom);
+  }
+
+  // ── Boundaries ─────────────────────────────────────────────────────────────
+  wall3(0,               0,       T3,            LEVEL3_HEIGHT);
+  wall3(LEVEL3_WIDTH - T3, 0,     T3,            LEVEL3_HEIGHT);
+  wall3(0,               0,       LEVEL3_WIDTH,  T3);
+  wall3(0,               FLOOR3,  LEVEL3_WIDTH,  T3);
+
+  // ── S2: Ascending triple-step tower (x=400–760) ────────────────────────────
+  wall3(400,  448, 120, T3, true);   // Step A  top=448  rise=80px (stages 0–4)
+  wall3(520,  384, 120, T3, true);   // Step B  top=384  rise=64px from A
+  wall3(640,  320, 120, T3, true);   // Step C  top=320  rise=64px from B
+  wall3(740,  448,  80, T3, true);   // Descent ledge — intermediate drop back to floor
+
+  // ── S3: Vertical Wall 1 — floor-level gap (x=820) ─────────────────────────
+  // Gap 444→528 = 84px. Stages 0–2 (≤66px) pass; stage 3 (85px) blocked.
+  vertWall3(820, 0, 444);
+
+  // ── S4: Suspended platform field (x=880–1280) ──────────────────────────────
+  wall3(880,  416, 120, T3, true);   // Plat A  top=416  rise=112px (stages 0–2 only)
+  wall3(1020, 464, 120, T3, true);   // Plat B  top=464  rise=64px  (stages 0–5)
+  wall3(1160, 432, 120, T3, true);   // Plat C  top=432  rise=96px  (stages 0–3)
+
+  // ── S5: Vertical Wall 2 — mid-height gap (x=1350) ─────────────────────────
+  // Stepping platform left of wall: Bob stands with feet at y=472, passes gap 400→472 (72px).
+  // height ≤ 72 → stages 0–2 pass; stage 3 (85px) blocked.
+  wall3(1300, 472,  50, T3, true);   // left stepping platform  top=472
+  vertWall3(1350, 400, 472);
+
+  // ── S6: Wide descending platform + floor duct (x=1420–1930) ───────────────
+  wall3(1420, 432, 180, T3, true);   // wide platform top=432 (food-safe open above)
+
+  // Floor duct: 72px gap, stages 0–2 pass, stage 3 (85px) blocked
+  ductCeiling3(1650, 72, 280);
+
+  // ── S7: Post-duct elevated platform (x=2000–2150) ─────────────────────────
+  wall3(2000, 416, 150, T3, true);   // Plat D  top=416  rise=112px (stages 0–2)
+
+  // ── S8: Vertical Wall 3 — highest elevated gap (x=2520) ───────────────────
+  // Left stepping platform: feet at y=416, gap 336→416 = 80px.
+  // height ≤ 80 → stages 0–2 pass; stage 3 (85px) blocked.
+  wall3(2460, 416,  60, T3, true);   // left stepping platform  top=416
+  vertWall3(2520, 336, 416);
+  // Right drop: no platform — Bob falls to floor after passing the gap.
+
+  // ── S9: Bonus platform in final sprint (x=3300–3450) ─────────────────────
+  wall3(3300, 448, 150, T3, true);   // bonus platform top=448  rise=80px (stages 0–4)
+
+  // ── EXIT ──────────────────────────────────────────────────────────────────
+  const exitX = LEVEL3_WIDTH - T3 * 4;
+  const exitY = FLOOR3 - T3 * 2;
+
+  if (!scene.textures.exists("exit_door")) {
+    const exitGfx = scene.add.graphics();
+    exitGfx.fillStyle(0x2ecc71, 0.2);  exitGfx.fillRect(0, 0, T3 * 1.5, T3 * 2);
+    exitGfx.lineStyle(3, 0x2ecc71, 1); exitGfx.strokeRect(0, 0, T3 * 1.5, T3 * 2);
+    exitGfx.fillStyle(0x2ecc71, 1);    exitGfx.fillTriangle(8, T3 * 0.6, 18, T3, 8, T3 * 1.4);
+    exitGfx.generateTexture("exit_door", T3 * 1.5, T3 * 2); exitGfx.destroy();
+  }
+  scene.add.image(exitX + T3 * 0.75, exitY + T3, "exit_door");
+  const exitZone = scene.add.zone(exitX + T3 * 0.75, exitY + T3, T3 * 1.5, T3 * 2);
+  scene.physics.world.enable(exitZone, Phaser.Physics.Arcade.STATIC_BODY);
+
+  // ── Hint labels ────────────────────────────────────────────────────────────
+  const hs: Phaser.Types.GameObjects.Text.TextStyle = {
+    fontSize: "13px", color: "#52c97a", fontFamily: "monospace",
+    stroke: "#000", strokeThickness: 2, align: "center",
+  };
+  scene.add.text(420,  FLOOR3 - 68, "Climb up →",           { ...hs }).setOrigin(0, 0.5);
+  scene.add.text(830,  FLOOR3 - 68, "Squeeze through ↗",    { ...hs, color: "#f39c12" }).setOrigin(0, 0.5);
+  scene.add.text(1310, FLOOR3 - 68, "Jump to the gap →",    { ...hs, color: "#e67e22" }).setOrigin(0, 0.5);
+  scene.add.text(1660, FLOOR3 - 68, "Tightest yet →",       { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
+  scene.add.text(2470, FLOOR3 - 68, "Step up & squeeze →",  { ...hs, color: "#e74c3c" }).setOrigin(0, 0.5);
+  scene.add.text(exitX + T3 * 0.75, exitY - 22, "EXIT ▼",
+    { fontSize: "13px", color: "#2ecc71", fontFamily: "monospace", stroke: "#000", strokeThickness: 2 })
+    .setOrigin(0.5);
+
+  return { platforms, exitZone, bgGraphics: bg, levelWidth: LEVEL3_WIDTH, levelHeight: LEVEL3_HEIGHT };
+}
+
+function drawCaveBg(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+  const T3 = TILE_SIZE;
+  // Subtle drip grid
+  g.lineStyle(1, 0x1a3d22, 0.35);
+  for (let x = 0; x < w; x += 56) {
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.strokePath();
+  }
+  for (let y = 0; y < h; y += 80) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.strokePath();
+  }
+
+  // Stalactite silhouettes hanging from ceiling
+  for (let x = 80; x < w - 40; x += 140 + (x % 70)) {
+    const sh = 28 + (x % 5) * 8;
+    g.fillStyle(0x071209, 0.8);
+    g.fillTriangle(x, T3, x - 12, T3 + sh, x + 12, T3 + sh);
+    // Ice-drip tip glow
+    g.fillStyle(0x2e6b47, 0.3);
+    g.fillCircle(x, T3 + sh, 3);
+  }
+
+  // Bioluminescent fungus blobs on walls (left side)
+  for (let y = 100; y < h - 80; y += 110) {
+    g.fillStyle(0x1abc9c, 0.18);
+    g.fillCircle(28, y, 9);
+    g.fillStyle(0x27ae60, 0.12);
+    g.fillCircle(28, y, 16);
+  }
+  // Right side
+  for (let y = 140; y < h - 80; y += 110) {
+    g.fillStyle(0x1abc9c, 0.15);
+    g.fillCircle(w - 28, y, 9);
+    g.fillStyle(0x27ae60, 0.1);
+    g.fillCircle(w - 28, y, 16);
+  }
+
+  // Drip streaks on walls
+  g.lineStyle(1, 0x1a3d22, 0.4);
+  for (let x = 130; x < w - 80; x += 300 + (x % 60)) {
+    const dy = 60 + (x % 4) * 30;
+    g.beginPath();
+    g.moveTo(x, T3 + 8);
+    g.lineTo(x + 4, T3 + dy);
+    g.lineTo(x,     T3 + dy + 12);
+    g.strokePath();
+    // Drip pool dot
+    g.fillStyle(0x2e6b47, 0.22);
+    g.fillCircle(x, T3 + dy + 14, 4);
+  }
+
+  // Floor glow line (bioluminescent strip at floor level)
+  g.fillStyle(0x27ae60, 0.12);
+  g.fillRect(0, h - T3 - 4, w, 4);
+}
+
 function drawBgDetails(g: Phaser.GameObjects.Graphics) {
   g.lineStyle(1, 0x16213e, 0.45);
   for (let x = 0; x < LEVEL_WIDTH; x += 64) {
